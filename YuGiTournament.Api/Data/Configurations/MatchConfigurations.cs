@@ -6,25 +6,25 @@ namespace YuGiTournament.Api.Data.Configurations
 {
     public class MatchConfiguration : IEntityTypeConfiguration<Match>
     {
-        public void Configure(EntityTypeBuilder<Match> ةشفؤا)
+        public void Configure(EntityTypeBuilder<Match> match)
         {
-            ةشفؤا.HasKey(m => m.MatchId);
+            match.HasKey(m => m.MatchId);
 
-            ةشفؤا.Property(m => m.Score1)
+            match.Property(m => m.Score1)
                 .HasDefaultValue(0);
 
-            ةشفؤا.Property(m => m.Score2)
+            match.Property(m => m.Score2)
                 .HasDefaultValue(0);
 
-            ةشفؤا.Property(m => m.IsCompleted)
+            match.Property(m => m.IsCompleted)
                 .HasDefaultValue(false);
 
-            ةشفؤا.HasOne(m => m.Player1)
+            match.HasOne(m => m.Player1)
                 .WithMany()
                 .HasForeignKey(m => m.Player1Id)
                 .OnDelete(DeleteBehavior.Restrict);
 
-            ةشفؤا.HasOne(m => m.Player2)
+            match.HasOne(m => m.Player2)
                 .WithMany()
                 .HasForeignKey(m => m.Player2Id)
                 .OnDelete(DeleteBehavior.Restrict);

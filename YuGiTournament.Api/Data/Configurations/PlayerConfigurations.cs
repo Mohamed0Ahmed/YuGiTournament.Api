@@ -10,18 +10,23 @@ namespace YuGiTournament.Api.Data.Configurations
         {
             player.HasKey(p => p.PlayerId);
 
+            player.Property(p => p.PlayerId)
+                  .ValueGeneratedOnAdd()
+                  .UseIdentityColumn();
+                  
+
             player.Property(p => p.FullName)
-                .IsRequired()
-                .HasMaxLength(100);
+                  .IsRequired()
+                  .HasMaxLength(100);
 
             player.Property(p => p.Wins)
-                .HasDefaultValue(0);
+                  .HasDefaultValue(0);
 
             player.Property(p => p.Draws)
-                .HasDefaultValue(0);
+                  .HasDefaultValue(0);
 
             player.Property(p => p.Points)
-                .HasDefaultValue(0);
+                  .HasDefaultValue(0);
         }
     }
 }
