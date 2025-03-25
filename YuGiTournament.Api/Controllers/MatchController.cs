@@ -37,16 +37,13 @@ namespace YuGiTournament.Api.Controllers
         }
 
 
-        
+
         [HttpPost("{matchId}/result")]
         public async Task<IActionResult> UpdateMatchResult(int matchId, [FromBody] MatchResultDto resultDto)
         {
-            var success = await _matchService.UpdateMatchResultAsync(matchId, resultDto.WinnerId);
+            var success = await _matchService.UpdateMatchResultAsync(matchId, resultDto);
 
-            if (!success)
-                return BadRequest("Failed to update match result or match already completed.");
-
-            return Ok("Match result updated successfully.");
+            return Ok(success);
         }
 
     }

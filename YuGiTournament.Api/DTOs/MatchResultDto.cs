@@ -2,6 +2,6 @@
 {
     public class MatchResultDto
     {
-        public int WinnerId { get; set; }
+        public int? WinnerId { get; set; }
     }
 }
