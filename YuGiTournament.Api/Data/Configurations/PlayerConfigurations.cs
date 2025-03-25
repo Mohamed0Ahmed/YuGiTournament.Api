@@ -20,6 +20,9 @@ namespace YuGiTournament.Api.Data.Configurations
                   .HasMaxLength(100);
 
             player.Property(p => p.Wins)
+                  .HasDefaultValue(0); 
+            
+            player.Property(p => p.Losses)
                   .HasDefaultValue(0);
 
             player.Property(p => p.Draws)

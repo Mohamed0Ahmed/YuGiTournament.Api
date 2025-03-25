@@ -9,7 +9,7 @@
         public int Score2 { get; set; }
         public bool IsCompleted { get; set; }
 
-        public virtual Player Player1 { get; set; } = null!;
-        public virtual Player Player2 { get; set; } = null!;
+        public  Player Player1 { get; set; } = null!;
+        public  Player Player2 { get; set; } = null!;
     }
 }

@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using YuGiTournament.Api.Data;
 
@@ -11,9 +12,11 @@ using YuGiTournament.Api.Data;
 namespace YuGiTournament.Api.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250324162806_Add Losses")]
+    partial class AddLosses
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -253,9 +256,6 @@ namespace YuGiTournament.Api.Migrations
                     b.Property<int>("Player2Id")
                         .HasColumnType("int");
 
-                    b.Property<int?>("PlayerId")
-                        .HasColumnType("int");
-
                     b.Property<int>("Score1")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("int")
@@ -271,8 +271,6 @@ namespace YuGiTournament.Api.Migrations
                     b.HasIndex("Player1Id");
 
                     b.HasIndex("Player2Id");
-
-                    b.HasIndex("PlayerId");
 
                     b.ToTable("Matches");
                 });
@@ -300,10 +298,10 @@ namespace YuGiTournament.Api.Migrations
                         .HasColumnType("int")
                         .HasDefaultValue(0);
 
-                    b.Property<double>("Points")
+                    b.Property<int>("Points")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("float")
-                        .HasDefaultValue(0.0);
+                        .HasColumnType("int")
+                        .HasDefaultValue(0);
 
                     b.Property<int>("Wins")
                         .ValueGeneratedOnAdd()
@@ -380,18 +378,9 @@ namespace YuGiTournament.Api.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.HasOne("YuGiTournament.Api.Models.Player", null)
-                        .WithMany("Matches")
-                        .HasForeignKey("PlayerId");
-
                     b.Navigation("Player1");
 
                     b.Navigation("Player2");
-                });
-
-            modelBuilder.Entity("YuGiTournament.Api.Models.Player", b =>
-                {
-                    b.Navigation("Matches");
                 });
 #pragma warning restore 612, 618
         }
