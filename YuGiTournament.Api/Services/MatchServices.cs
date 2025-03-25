@@ -31,7 +31,6 @@ namespace YuGiTournament.Api.Services
                 .ToListAsync();
         }
 
-
         public async Task<object?> GetMatchByIdAsync(int matchId)
         {
             return await _context.Matches
@@ -48,137 +47,106 @@ namespace YuGiTournament.Api.Services
                 .FirstOrDefaultAsync();
         }
 
-
         public async Task<ApiResponse> ResetMatchByIdAsync(int matchId)
         {
             var match = await _context.Matches.FindAsync(matchId);
-
             if (match == null)
                 return new ApiResponse("الماتش ده مش موجود");
+
+            var matchRounds = await _context.MatchRounds.Where(mr => mr.MatchId == matchId).ToListAsync();
+            if (!matchRounds.Any())
+                return new ApiResponse("الماتش لسه متلعبش");
 
             var player1 = await _context.Players.FindAsync(match.Player1Id);
             var player2 = await _context.Players.FindAsync(match.Player2Id);
 
-            if (player1 == null || player2 == null)
-                return new ApiResponse("فيه واحد من الرجالة دي مش موجود");
+            foreach (var round in matchRounds)
+            {
+                if (round.WinnerId == player1?.PlayerId)
+                {
+                    player1!.Wins -= 1;
+                    player1.Points -= 1;
+                    player2!.Losses -= 1;
+                }
+                else if (round.WinnerId == player2?.PlayerId)
+                {
+                    player2!.Wins -= 1;
+                    player2.Points -= 1;
+                    player1!.Losses -= 1;
+                }
+                else if (round.IsDraw)
+                {
+                    player1!.Draws -= 1;
+                    player2!.Draws -= 1;
+                    player1.Points -= 0.5;
+                    player2.Points -= 0.5;
+                }
+            }
 
-            if (match.Score1 > match.Score2)
-            {
-                player1.Wins -= 1;
-                player2.Losses -= 1;
-                player1.Points -= 1;
-            }
-            else if (match.Score1 < match.Score2)
-            {
-                player2.Wins -= 1;
-                player1.Losses -= 1;
-                player2.Points -= 1;
-            }
-            else if (match.Score1 == match.Score2)
-            {
-                player1.Points -= 0.5;
-                player2.Points -= 0.5;
-                player1.Draws -= 1;
-                player2.Draws -= 1;
-            }
-
+            _context.MatchRounds.RemoveRange(matchRounds);
             match.Score1 = 0;
             match.Score2 = 0;
             match.IsCompleted = false;
 
+            player1!.UpdateStats();
+            player2!.UpdateStats();
             await _context.SaveChangesAsync();
             return new ApiResponse("تم إعادة تعيين الماتش من البداية.");
         }
 
-
-        public async Task<Match> CreateMatchAsync(int player1Id, int player2Id)
-        {
-            var player1 = await _context.Players.FindAsync(player1Id);
-            var player2 = await _context.Players.FindAsync(player2Id);
-
-            if (player1 == null || player2 == null)
-                throw new Exception("One or both players not found");
-
-            var match = new Match
-            {
-                Player1Id = player1Id,
-                Player2Id = player2Id,
-                Score1 = 0,
-                Score2 = 0,
-                IsCompleted = false
-            };
-
-            _context.Matches.Add(match);
-            await _context.SaveChangesAsync();
-            return match;
-        }
-
-
         public async Task<ApiResponse> UpdateMatchResultAsync(int matchId, MatchResultDto resultDto)
         {
-            var match = await _context.Matches.FirstOrDefaultAsync(m => m.MatchId == matchId);
-
+            var match = await _context.Matches.FindAsync(matchId);
             if (match == null)
                 return new ApiResponse("No Match Here");
 
             var player1 = await _context.Players.FindAsync(match.Player1Id);
             var player2 = await _context.Players.FindAsync(match.Player2Id);
-
+            var winner = resultDto.WinnerId == match.Player1Id ? player1 : player2;
             if (player1 == null || player2 == null)
                 return new ApiResponse("All Players Must Be There");
 
-            int matchCount = await _context.Matches.CountAsync(m =>
-                (m.Player1Id == match.Player1Id && m.Player2Id == match.Player2Id) ||
-                (m.Player1Id == match.Player2Id && m.Player2Id == match.Player1Id));
-
+            int matchCount = await _context.MatchRounds.CountAsync(mr => mr.MatchId == matchId);
             if (matchCount >= 5)
                 return new ApiResponse("خلاص بقي هم لعبوا ال 5 ماتشات والله");
 
+            var newRound = new MatchRound { MatchId = matchId };
             if (resultDto.WinnerId == null)
             {
-                HandleDraw(match, player1, player2);
-                await _context.SaveChangesAsync();
-                return new ApiResponse("تم اضافة نصف نقطة لكلا اللاعبين");
+                newRound.IsDraw = true;
+                player1.Points += 0.5;
+                player2.Points += 0.5;
+                player1.Draws += 1;
+                player2.Draws += 1;
+                match.Score1 += 0.5;
+                match.Score2 += 0.5;
+            }
+            else if (resultDto.WinnerId == match.Player1Id || resultDto.WinnerId == match.Player2Id)
+            {
+               
+                var loser = resultDto.WinnerId == match.Player1Id ? player2 : player1;
+
+                newRound.WinnerId = winner!.PlayerId;
+                winner.Points += 1;
+                winner.Wins += 1;
+                loser.Losses += 1;
+
+                if (winner.PlayerId == match.Player1Id)
+                    match.Score1 += 1;
+                else
+                    match.Score2 += 1;
+            }
+            else
+            {
+                return new ApiResponse("Invalid winnerId. The winner must be one of the match players");
             }
 
-            if (resultDto.WinnerId != match.Player1Id && resultDto.WinnerId != match.Player2Id)
-                return new ApiResponse("Invalid winnerId. The winner must be one of the match players");
-
-            var winner = resultDto.WinnerId == match.Player1Id ? player1 : player2;
-            var loser = resultDto.WinnerId == match.Player1Id ? player2 : player1;
-
-            winner!.Points += 1;
-            winner.Wins += 1;
-            loser.Losses += 1;
-
-            if (resultDto.WinnerId == match.Player1Id)
-                match.Score1 += 1;
-            else
-                match.Score2 += 1;
-
-            match.IsCompleted = (match.Score1 + match.Score2) >= 5;
-
+            _context.MatchRounds.Add(newRound);
+            match.IsCompleted = await _context.MatchRounds.CountAsync(mr => mr.MatchId == matchId) >= 5;
+            player1.UpdateStats();
+            player2.UpdateStats();
             await _context.SaveChangesAsync();
-            return new ApiResponse($"تم تحديث النتيجة واضافة نقطة للاعب {winner!.FullName}");
+            return new ApiResponse($"تم اضافة نقطة للاعب : {winner!.FullName}");
         }
-
-
-
-
-
-
-        //**********************
-        private void HandleDraw(Match match, Player player1, Player player2)
-        {
-            match.Score1 += 0.5;
-            match.Score2 += 0.5;
-
-            player1.Points += 0.5;
-            player1.Draws += 1;
-
-            player2.Points += 0.5;
-            player2.Draws += 1;
-        }
-
     }
 }

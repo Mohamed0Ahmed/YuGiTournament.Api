@@ -34,12 +34,23 @@ namespace YuGiTournament.Api.Services
             if (player == null)
                 return new ApiResponse("مفيش هنا لاعب بالاسم ده");
 
-            _context.Matches.RemoveRange(_context.Matches
-                .Where(m => m.Player1Id == playerId || m.Player2Id == playerId));
+            var playerMatches = await _context.Matches
+                .Where(m => m.Player1Id == playerId || m.Player2Id == playerId)
+                .Select(m => m.MatchId)
+                .ToListAsync();
+
+            var roundsToDelete = _context.MatchRounds
+                .Where(r => playerMatches.Contains(r.MatchId));
+            _context.MatchRounds.RemoveRange(roundsToDelete);
+
+            var matchesToDelete = _context.Matches
+                .Where(m => m.Player1Id == playerId || m.Player2Id == playerId);
+            _context.Matches.RemoveRange(matchesToDelete);
 
             _playerRepository.Delete(player);
+
             await _context.SaveChangesAsync();
-            return new ApiResponse($"تم حذف اللاعب {player.FullName} ومبارياته");
+            return new ApiResponse($"تم حذف اللاعب {player.FullName} وكل مبارياته والجولات المرتبطة بيه.");
         }
 
         public async Task<Player> AddPlayerAsync(string fullName)
@@ -48,7 +59,9 @@ namespace YuGiTournament.Api.Services
             _context.Players.Add(player);
             await _context.SaveChangesAsync();
 
-            var otherPlayers = await _context.Players.Where(p => p.PlayerId != player.PlayerId).ToListAsync();
+            var otherPlayers = await _context.Players
+                .Where(p => p.PlayerId != player.PlayerId)
+                .ToListAsync();
 
             foreach (var opponent in otherPlayers)
             {
@@ -67,6 +80,5 @@ namespace YuGiTournament.Api.Services
             await _context.SaveChangesAsync();
             return player;
         }
-
     }
 }

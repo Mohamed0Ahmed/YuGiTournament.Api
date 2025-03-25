@@ -17,7 +17,14 @@ namespace YuGiTournament.Api.Data.Configurations
 
             player.Property(p => p.FullName)
                   .IsRequired()
-                  .HasMaxLength(100);
+                  .HasMaxLength(100);  
+            
+            player.Property(p => p.MatchesPlayed)
+                  .HasDefaultValue(0);
+        
+          
+            player.Property(p => p.WinRate)
+                  .HasDefaultValue(0);
 
             player.Property(p => p.Wins)
                   .HasDefaultValue(0); 

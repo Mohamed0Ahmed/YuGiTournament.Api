@@ -9,9 +9,6 @@ namespace YuGiTournament.Api.Services.Abstractions
         Task<IEnumerable<object>> GetAllMatchesAsync();
         Task<object?> GetMatchByIdAsync(int matchId);
         Task<ApiResponse> ResetMatchByIdAsync(int matchId);
-
-        Task<Match> CreateMatchAsync(int player1Id, int player2Id);
-        Task<ApiResponse> UpdateMatchResultAsync(int matchId, MatchResultDto result);
-
+        Task<ApiResponse> UpdateMatchResultAsync(int matchId, MatchResultDto resultDto);
     }
 }
