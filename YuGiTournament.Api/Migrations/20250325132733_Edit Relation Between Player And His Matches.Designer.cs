@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using YuGiTournament.Api.Data;
 
@@ -11,9 +12,11 @@ using YuGiTournament.Api.Data;
 namespace YuGiTournament.Api.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250325132733_Edit Relation Between Player And His Matches")]
+    partial class EditRelationBetweenPlayerAndHisMatches
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -253,15 +256,15 @@ namespace YuGiTournament.Api.Migrations
                     b.Property<int?>("PlayerId")
                         .HasColumnType("int");
 
-                    b.Property<double>("Score1")
+                    b.Property<int>("Score1")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("float")
-                        .HasDefaultValue(0.0);
+                        .HasColumnType("int")
+                        .HasDefaultValue(0);
 
-                    b.Property<double>("Score2")
+                    b.Property<int>("Score2")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("float")
-                        .HasDefaultValue(0.0);
+                        .HasColumnType("int")
+                        .HasDefaultValue(0);
 
                     b.HasKey("MatchId");
 
@@ -272,30 +275,6 @@ namespace YuGiTournament.Api.Migrations
                     b.HasIndex("PlayerId");
 
                     b.ToTable("Matches");
-                });
-
-            modelBuilder.Entity("YuGiTournament.Api.Models.MatchRound", b =>
-                {
-                    b.Property<int>("MatchRoundId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("MatchRoundId"));
-
-                    b.Property<bool>("IsDraw")
-                        .HasColumnType("bit");
-
-                    b.Property<int>("MatchId")
-                        .HasColumnType("int");
-
-                    b.Property<int?>("WinnerId")
-                        .HasColumnType("int");
-
-                    b.HasKey("MatchRoundId");
-
-                    b.HasIndex("MatchId");
-
-                    b.ToTable("MatchRounds");
                 });
 
             modelBuilder.Entity("YuGiTournament.Api.Models.Player", b =>
@@ -408,22 +387,6 @@ namespace YuGiTournament.Api.Migrations
                     b.Navigation("Player1");
 
                     b.Navigation("Player2");
-                });
-
-            modelBuilder.Entity("YuGiTournament.Api.Models.MatchRound", b =>
-                {
-                    b.HasOne("YuGiTournament.Api.Models.Match", "Match")
-                        .WithMany("Rounds")
-                        .HasForeignKey("MatchId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Match");
-                });
-
-            modelBuilder.Entity("YuGiTournament.Api.Models.Match", b =>
-                {
-                    b.Navigation("Rounds");
                 });
 
             modelBuilder.Entity("YuGiTournament.Api.Models.Player", b =>

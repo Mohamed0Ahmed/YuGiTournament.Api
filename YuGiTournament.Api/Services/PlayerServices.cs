@@ -1,5 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using YuGiTournament.Api.Abstractions;
+using YuGiTournament.Api.ApiResponses;
 using YuGiTournament.Api.Data;
 using YuGiTournament.Api.Models;
 using YuGiTournament.Api.Services.Abstractions;
@@ -11,7 +12,7 @@ namespace YuGiTournament.Api.Services
         private readonly IPlayerRepository _playerRepository;
         private readonly ApplicationDbContext _context;
 
-        public PlayerService(IPlayerRepository playerRepository , ApplicationDbContext context)
+        public PlayerService(IPlayerRepository playerRepository, ApplicationDbContext context)
         {
             _playerRepository = playerRepository;
             _context = context;
@@ -27,17 +28,19 @@ namespace YuGiTournament.Api.Services
             return await _playerRepository.GetByIdAsync(playerId);
         }
 
-        public async Task<bool> DeletePlayerAsync(int playerId)
+        public async Task<ApiResponse> DeletePlayerAsync(int playerId)
         {
-            var player = await _playerRepository.GetByIdAsync(playerId);
-            if (player == null) return false;
+            var player = await _context.Players.FindAsync(playerId);
+            if (player == null)
+                return new ApiResponse("مفيش هنا لاعب بالاسم ده");
 
-             _playerRepository.Delete(player);
+            _context.Matches.RemoveRange(_context.Matches
+                .Where(m => m.Player1Id == playerId || m.Player2Id == playerId));
+
+            _playerRepository.Delete(player);
             await _context.SaveChangesAsync();
-            return true;
+            return new ApiResponse($"تم حذف اللاعب {player.FullName} ومبارياته");
         }
-
-
 
         public async Task<Player> AddPlayerAsync(string fullName)
         {

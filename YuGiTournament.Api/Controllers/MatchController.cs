@@ -2,6 +2,7 @@
 using YuGiTournament.Api.Services.Abstractions;
 using YuGiTournament.Api.Models;
 using YuGiTournament.Api.DTOs;
+using YuGiTournament.Api.ApiResponses;
 
 namespace YuGiTournament.Api.Controllers
 {
@@ -45,6 +46,17 @@ namespace YuGiTournament.Api.Controllers
 
             return Ok(success);
         }
+
+
+        [HttpDelete("reset/{matchId}")]
+        public async Task<IActionResult> ResetMatches( int matchId)
+        {
+            var success = await _matchService.ResetMatchByIdAsync(matchId);
+
+
+            return Ok(success);
+        }
+
 
     }
 

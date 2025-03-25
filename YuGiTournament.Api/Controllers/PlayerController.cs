@@ -37,10 +37,8 @@ namespace YuGiTournament.Api.Controllers
         public async Task<IActionResult> DeletePlayer(int playerId)
         {
             var result = await _playerService.DeletePlayerAsync(playerId);
-            if (!result)
-                return NotFound("Player not found or already deleted.");
-
-            return NoContent();
+          
+            return Ok(result);
         }
     }
 }

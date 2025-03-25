@@ -11,23 +11,28 @@ namespace YuGiTournament.Api.Data.Configurations
             match.HasKey(m => m.MatchId);
 
             match.Property(m => m.Score1)
-                .HasDefaultValue(0);
+                 .HasDefaultValue(0);
 
             match.Property(m => m.Score2)
-                .HasDefaultValue(0);
+                 .HasDefaultValue(0);
 
             match.Property(m => m.IsCompleted)
-                .HasDefaultValue(false);
+                 .HasDefaultValue(false);
 
             match.HasOne(m => m.Player1)
-                .WithMany()
-                .HasForeignKey(m => m.Player1Id)
-                .OnDelete(DeleteBehavior.Restrict);
+                 .WithMany()
+                 .HasForeignKey(m => m.Player1Id)
+                 .OnDelete(DeleteBehavior.Restrict);
 
             match.HasOne(m => m.Player2)
-                .WithMany()
-                .HasForeignKey(m => m.Player2Id)
-                .OnDelete(DeleteBehavior.Restrict);
+                 .WithMany()
+                 .HasForeignKey(m => m.Player2Id)
+                 .OnDelete(DeleteBehavior.Restrict);
+
+            match.HasMany(m => m.Rounds)
+                 .WithOne(r => r.Match)
+                 .HasForeignKey(r => r.MatchId)
+                 .OnDelete(DeleteBehavior.Cascade);
         }
     }
 }

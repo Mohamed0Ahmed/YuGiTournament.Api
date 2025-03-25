@@ -1,4 +1,5 @@
-﻿using YuGiTournament.Api.Models;
+﻿using YuGiTournament.Api.ApiResponses;
+using YuGiTournament.Api.Models;
 
 namespace YuGiTournament.Api.Services.Abstractions
 {
@@ -7,6 +8,6 @@ namespace YuGiTournament.Api.Services.Abstractions
         Task<IEnumerable<Player>> GetAllPlayersAsync();
         Task<Player?> GetPlayerByIdAsync(int playerId);
         Task<Player> AddPlayerAsync(string NamePlayer);
-        Task<bool> DeletePlayerAsync(int playerId);
+        Task<ApiResponse> DeletePlayerAsync(int playerId);
     }
 }
