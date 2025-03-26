@@ -28,20 +28,14 @@ namespace YuGiTournament.Api.Controllers
         public async Task<IActionResult> Login([FromBody] LoginDto model)
         {
             var user = await _userManager.FindByEmailAsync(model.Email);
-            if (user == null)
+            if (user == null || !(await _userManager.CheckPasswordAsync(user, model.Password)))
             {
-                return Unauthorized("Invalid credentials.");
-            }
-
-            var result = await _signInManager.CheckPasswordSignInAsync(user, model.Password, false);
-            if (!result.Succeeded)
-            {
-                return Unauthorized("Invalid credentials.");
+                return Unauthorized(new { message = "Invalid email or password." });
             }
 
             var roles = await _userManager.GetRolesAsync(user);
-
             var token = GenerateJwtToken(user, roles);
+
             return Ok(new { Token = token });
         }
 
@@ -51,28 +45,35 @@ namespace YuGiTournament.Api.Controllers
             return Ok("Logout successful. Just remove the token on client side.");
         }
 
-
-
-        //******************************
-
         private string GenerateJwtToken(ApplicationUser user, IList<string> roles)
         {
             var claims = new List<Claim>
             {
-                new Claim(JwtRegisteredClaimNames.Sub, user.Id),
-                new Claim(JwtRegisteredClaimNames.Email, user.Email!),
-                new Claim(ClaimTypes.Name, user.UserName!)
+                new (JwtRegisteredClaimNames.Sub, user.Id),
+                new (JwtRegisteredClaimNames.Email, user.Email!),
+                new (ClaimTypes.Name, user.UserName!)
             };
 
-            claims.AddRange(roles.Select(role => new Claim(ClaimTypes.Role, role)));
 
-            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration["Jwt:Key"]!));
+
+            claims.AddRange(roles.Select(role => new Claim("role", role)));
+
+            var jwtKey = _configuration["Jwt:Key"];
+            if (string.IsNullOrWhiteSpace(jwtKey))
+            {
+                throw new InvalidOperationException("JWT Key is missing from configuration.");
+            }
+
+            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey));
             var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
+
+            var expireDays = int.Parse(_configuration["Jwt:ExpireDays"] ?? "7");
+
             var token = new JwtSecurityToken(
                 issuer: _configuration["Jwt:Issuer"],
-                audience: _configuration["Jwt:Audience"], 
+                audience: _configuration["Jwt:Audience"],
                 claims: claims,
-                expires: DateTime.UtcNow.AddDays(7),
+                expires: DateTime.UtcNow.AddDays(expireDays),
                 signingCredentials: creds
             );
 

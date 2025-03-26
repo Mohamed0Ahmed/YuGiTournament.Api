@@ -16,16 +16,15 @@ namespace YuGiTournament.Api.Controllers
             _playerService = playerService;
         }
 
-        [Authorize(Roles = "Admin")]
         [HttpPost]
         public async Task<IActionResult> AddPlayer([FromBody] string fullName)
         {
             await _playerService.AddPlayerAsync(fullName);
-            var Player = new Player
+            var player = new Player
             {
                 FullName = fullName,
             };
-            return Ok(Player);
+            return Ok(player);
         }
 
         [HttpGet]
@@ -35,12 +34,12 @@ namespace YuGiTournament.Api.Controllers
             return Ok(players);
         }
 
-        [Authorize(Roles = "Admin")]
+        [Authorize]
         [HttpDelete("{playerId}")]
         public async Task<IActionResult> DeletePlayer(int playerId)
         {
+            Console.WriteLine($"DeletePlayer called with playerId: {playerId}");
             var result = await _playerService.DeletePlayerAsync(playerId);
-          
             return Ok(result);
         }
     }
