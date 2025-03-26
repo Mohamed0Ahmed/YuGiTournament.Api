@@ -9,5 +9,8 @@ namespace YuGiTournament.Api.Identities
         public string FName { get; set; } = null!;
         public string LName { get; set; } = null!;
         public bool IsAgree { get; set; }
+
+
+
     }
 }

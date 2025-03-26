@@ -19,5 +19,7 @@ namespace YuGiTournament.Api.Data
         public DbSet<Match> Matches { get; set; }
         public DbSet<Player> Players { get; set; }
         public DbSet<MatchRound> MatchRounds { get; set; }
+        public DbSet<OtpCode> OtpCodes { get; set; }
+        public DbSet<Message> Messages { get; set; }
     }
 }

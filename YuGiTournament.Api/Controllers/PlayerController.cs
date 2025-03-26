@@ -17,6 +17,7 @@ namespace YuGiTournament.Api.Controllers
         }
 
         [HttpPost]
+        [Authorize]
         public async Task<IActionResult> AddPlayer([FromBody] string fullName)
         {
             await _playerService.AddPlayerAsync(fullName);

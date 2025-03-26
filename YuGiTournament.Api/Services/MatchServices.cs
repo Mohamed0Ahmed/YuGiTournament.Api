@@ -148,7 +148,7 @@ namespace YuGiTournament.Api.Services
             }
 
             _context.MatchRounds.Add(newRound);
-            match.IsCompleted = await _context.MatchRounds.CountAsync(mr => mr.MatchId == matchId) >= 5;
+            match.IsCompleted = (match.Score1+ match.Score2) == 5;
             player1.UpdateStats();
             player2.UpdateStats();
             await _context.SaveChangesAsync();

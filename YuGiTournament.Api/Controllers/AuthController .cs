@@ -45,6 +45,9 @@ namespace YuGiTournament.Api.Controllers
             return Ok("Logout successful. Just remove the token on client side.");
         }
 
+
+        //****************************************
+
         private string GenerateJwtToken(ApplicationUser user, IList<string> roles)
         {
             var claims = new List<Claim>
