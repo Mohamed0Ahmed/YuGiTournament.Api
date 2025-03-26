@@ -1,6 +1,5 @@
 ﻿using YuGiTournament.Api.ApiResponses;
 using YuGiTournament.Api.DTOs;
-using YuGiTournament.Api.Models;
 
 namespace YuGiTournament.Api.Services.Abstractions
 {
