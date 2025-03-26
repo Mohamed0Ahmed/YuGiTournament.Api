@@ -39,12 +39,57 @@ namespace YuGiTournament.Api.Controllers
             return Ok(new { Token = token });
         }
 
+        [HttpPost("player-login")]
+        public async Task<IActionResult> PlayerLogin([FromBody] PlayerLoginDto model)
+        {
+            var user = await _userManager.FindByNameAsync(model.PhoneNumber); // البحث برقم الموبايل (UserName)
+            if (user == null || !(await _userManager.CheckPasswordAsync(user, model.Password)))
+            {
+                return Unauthorized(new { message = "Invalid phone number or password." });
+            }
+
+            var roles = await _userManager.GetRolesAsync(user);
+            var token = GenerateJwtToken(user, roles);
+
+            return Ok(new { Token = token });
+        }
+
+
+
+        [HttpPost("register-player")] 
+        public async Task<IActionResult> RegisterPlayer([FromBody] RegisterPlayerDto model)
+        {
+            var user = new ApplicationUser
+            {
+                UserName = model.PhoneNumber,
+                PhoneNumber = model.PhoneNumber,
+                Email = $"{model.PhoneNumber}@yugi.com", 
+                EmailConfirmed = true,
+                FName = model.FirstName,
+                LName = model.LastName
+            };
+
+            var result = await _userManager.CreateAsync(user, model.Password);
+            if (!result.Succeeded)
+            {
+                return BadRequest(result.Errors);
+            }
+
+         
+
+            await _userManager.AddToRoleAsync(user, "Player");
+
+            return Ok(new { message = "تم تسجيلك بنجاح" });
+        }
+
+
+
+
         [HttpPost("logout")]
         public IActionResult Logout()
         {
             return Ok("Logout successful. Just remove the token on client side.");
         }
-
 
         //****************************************
 
@@ -56,8 +101,6 @@ namespace YuGiTournament.Api.Controllers
                 new (JwtRegisteredClaimNames.Email, user.Email!),
                 new (ClaimTypes.Name, user.UserName!)
             };
-
-
 
             claims.AddRange(roles.Select(role => new Claim("role", role)));
 
@@ -83,4 +126,5 @@ namespace YuGiTournament.Api.Controllers
             return new JwtSecurityTokenHandler().WriteToken(token);
         }
     }
+
 }

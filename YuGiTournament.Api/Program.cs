@@ -26,6 +26,7 @@ namespace YuGiTournament.Api
             builder.Services.AddScoped<IMatchService, MatchService>();
             builder.Services.AddScoped<IPlayerService, PlayerService>();
             builder.Services.AddScoped<ILeagueResetService, LeagueResetService>();
+            builder.Services.AddScoped<IMessageService, MessageService>();
 
             builder.Services.AddDbContext<ApplicationDbContext>(options =>
                 options.UseSqlServer(builder.Configuration.GetConnectionString("YuGiContext")));
@@ -119,10 +120,16 @@ namespace YuGiTournament.Api
             const string adminEmail = "admin@yugi.com";
             const string adminPassword = "Admin@1234";
             const string adminRole = "Admin";
+            const string playerRole = "Player";
 
             if (!await roleManager.RoleExistsAsync(adminRole))
             {
                 await roleManager.CreateAsync(new IdentityRole(adminRole));
+            }
+
+            if (!await roleManager.RoleExistsAsync(playerRole))
+            {
+                await roleManager.CreateAsync(new IdentityRole(playerRole));
             }
 
             var adminUser = await userManager.FindByEmailAsync(adminEmail);
