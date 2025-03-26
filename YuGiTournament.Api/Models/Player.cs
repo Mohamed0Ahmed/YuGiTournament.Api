@@ -13,7 +13,7 @@
 
         public double WinRate { get; set; }
 
-        public ICollection<Match> Matches { get; set; } = new List<Match>();
+        public ICollection<Match> Matches { get; set; } =[];
 
         public void UpdateStats()
         {

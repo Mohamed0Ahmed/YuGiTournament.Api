@@ -271,7 +271,7 @@ namespace YuGiTournament.Api.Migrations
 
                     b.HasIndex("PlayerId");
 
-                    b.ToTable("Matches");
+                    b.ToTable("Matches", (string)null);
                 });
 
             modelBuilder.Entity("YuGiTournament.Api.Models.MatchRound", b =>
@@ -295,7 +295,7 @@ namespace YuGiTournament.Api.Migrations
 
                     b.HasIndex("MatchId");
 
-                    b.ToTable("MatchRounds");
+                    b.ToTable("MatchRounds", (string)null);
                 });
 
             modelBuilder.Entity("YuGiTournament.Api.Models.Player", b =>
@@ -343,7 +343,7 @@ namespace YuGiTournament.Api.Migrations
 
                     b.HasKey("PlayerId");
 
-                    b.ToTable("Players");
+                    b.ToTable("Players", (string)null);
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>

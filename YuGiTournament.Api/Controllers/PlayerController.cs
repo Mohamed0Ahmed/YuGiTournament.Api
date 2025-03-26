@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using YuGiTournament.Api.Models;
 using YuGiTournament.Api.Services.Abstractions;
 
@@ -15,6 +16,7 @@ namespace YuGiTournament.Api.Controllers
             _playerService = playerService;
         }
 
+        [Authorize(Roles = "Admin")]
         [HttpPost]
         public async Task<IActionResult> AddPlayer([FromBody] string fullName)
         {
@@ -33,6 +35,7 @@ namespace YuGiTournament.Api.Controllers
             return Ok(players);
         }
 
+        [Authorize(Roles = "Admin")]
         [HttpDelete("{playerId}")]
         public async Task<IActionResult> DeletePlayer(int playerId)
         {

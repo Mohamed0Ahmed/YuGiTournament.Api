@@ -59,27 +59,29 @@ namespace YuGiTournament.Api.Services
 
             var player1 = await _context.Players.FindAsync(match.Player1Id);
             var player2 = await _context.Players.FindAsync(match.Player2Id);
+            if (player1 == null || player2 == null)
+                return new ApiResponse("اللاعبين غير موجودين");
 
             foreach (var round in matchRounds)
             {
-                if (round.WinnerId == player1?.PlayerId)
+                switch (round.WinnerId)
                 {
-                    player1!.Wins -= 1;
-                    player1.Points -= 1;
-                    player2!.Losses -= 1;
-                }
-                else if (round.WinnerId == player2?.PlayerId)
-                {
-                    player2!.Wins -= 1;
-                    player2.Points -= 1;
-                    player1!.Losses -= 1;
-                }
-                else if (round.IsDraw)
-                {
-                    player1!.Draws -= 1;
-                    player2!.Draws -= 1;
-                    player1.Points -= 0.5;
-                    player2.Points -= 0.5;
+                    case var winnerId when winnerId == player1.PlayerId:
+                        player1.Wins--;
+                        player1.Points--;
+                        player2.Losses--;
+                        break;
+                    case var winnerId when winnerId == player2.PlayerId:
+                        player2.Wins--;
+                        player2.Points--;
+                        player1.Losses--;
+                        break;
+                    case null when round.IsDraw:
+                        player1.Draws--;
+                        player2.Draws--;
+                        player1.Points -= 0.5;
+                        player2.Points -= 0.5;
+                        break;
                 }
             }
 
@@ -88,8 +90,8 @@ namespace YuGiTournament.Api.Services
             match.Score2 = 0;
             match.IsCompleted = false;
 
-            player1!.UpdateStats();
-            player2!.UpdateStats();
+            player1.UpdateStats();
+            player2.UpdateStats();
             await _context.SaveChangesAsync();
             return new ApiResponse("تم إعادة تعيين الماتش من البداية.");
         }
@@ -102,7 +104,6 @@ namespace YuGiTournament.Api.Services
 
             var player1 = await _context.Players.FindAsync(match.Player1Id);
             var player2 = await _context.Players.FindAsync(match.Player2Id);
-            var winner = resultDto.WinnerId == match.Player1Id ? player1 : player2;
             if (player1 == null || player2 == null)
                 return new ApiResponse("All Players Must Be There");
 
@@ -111,6 +112,8 @@ namespace YuGiTournament.Api.Services
                 return new ApiResponse("خلاص بقي هم لعبوا ال 5 ماتشات والله");
 
             var newRound = new MatchRound { MatchId = matchId };
+            string responseMessage;
+
             if (resultDto.WinnerId == null)
             {
                 newRound.IsDraw = true;
@@ -120,10 +123,11 @@ namespace YuGiTournament.Api.Services
                 player2.Draws += 1;
                 match.Score1 += 0.5;
                 match.Score2 += 0.5;
+                responseMessage = "تم اضافة نصف نقطة لكلا اللاعبين";
             }
             else if (resultDto.WinnerId == match.Player1Id || resultDto.WinnerId == match.Player2Id)
             {
-               
+                var winner = resultDto.WinnerId == match.Player1Id ? player1 : player2;
                 var loser = resultDto.WinnerId == match.Player1Id ? player2 : player1;
 
                 newRound.WinnerId = winner!.PlayerId;
@@ -135,6 +139,8 @@ namespace YuGiTournament.Api.Services
                     match.Score1 += 1;
                 else
                     match.Score2 += 1;
+
+                responseMessage = $"تم اضافة نقطة للاعب : {winner.FullName}";
             }
             else
             {
@@ -146,7 +152,8 @@ namespace YuGiTournament.Api.Services
             player1.UpdateStats();
             player2.UpdateStats();
             await _context.SaveChangesAsync();
-            return new ApiResponse($"تم اضافة نقطة للاعب : {winner!.FullName}");
+            return new ApiResponse(responseMessage);
         }
+
     }
 }

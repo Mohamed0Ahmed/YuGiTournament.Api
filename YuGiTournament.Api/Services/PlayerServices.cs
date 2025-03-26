@@ -56,29 +56,36 @@ namespace YuGiTournament.Api.Services
         public async Task<Player> AddPlayerAsync(string fullName)
         {
             var player = new Player { FullName = fullName };
+
             _context.Players.Add(player);
-            await _context.SaveChangesAsync();
+            await _context.SaveChangesAsync(); 
 
             var otherPlayers = await _context.Players
-                .Where(p => p.PlayerId != player.PlayerId)
+                .Where(p => p.PlayerId != player.PlayerId) 
                 .ToListAsync();
+
+            var matches = new List<Match>();
 
             foreach (var opponent in otherPlayers)
             {
-                var match = new Match
+                matches.Add(new Match
                 {
                     Player1Id = player.PlayerId,
                     Player2Id = opponent.PlayerId,
                     Score1 = 0,
                     Score2 = 0,
                     IsCompleted = false
-                };
-
-                _context.Matches.Add(match);
+                });
             }
 
-            await _context.SaveChangesAsync();
+            if (matches.Count != 0)
+            {
+                _context.Matches.AddRange(matches);
+                await _context.SaveChangesAsync();
+            }
+
             return player;
         }
+
     }
 }

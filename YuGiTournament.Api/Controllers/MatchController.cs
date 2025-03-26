@@ -2,7 +2,7 @@
 using YuGiTournament.Api.Services.Abstractions;
 using YuGiTournament.Api.Models;
 using YuGiTournament.Api.DTOs;
-using YuGiTournament.Api.ApiResponses;
+using Microsoft.AspNetCore.Authorization;
 
 namespace YuGiTournament.Api.Controllers
 {
@@ -38,7 +38,7 @@ namespace YuGiTournament.Api.Controllers
         }
 
 
-
+        [Authorize(Roles = "Admin")]
         [HttpPost("{matchId}/result")]
         public async Task<IActionResult> UpdateMatchResult(int matchId, [FromBody] MatchResultDto resultDto)
         {
@@ -47,7 +47,7 @@ namespace YuGiTournament.Api.Controllers
             return Ok(success);
         }
 
-
+        [Authorize(Roles = "Admin")]
         [HttpDelete("reset/{matchId}")]
         public async Task<IActionResult> ResetMatches( int matchId)
         {
