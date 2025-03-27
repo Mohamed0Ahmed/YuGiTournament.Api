@@ -1,9 +1,13 @@
-﻿namespace YuGiTournament.Api.Services.Abstractions
+﻿using YuGiTournament.Api.ApiResponses;
+
+namespace YuGiTournament.Api.Services.Abstractions
 {
     public interface IMessageService
     {
-        Task SendMessageToAdminAsync(string playerId, string content);
-        Task<List<object>> GetInboxAsync(string adminId);
-        Task MarkAsReadAsync(int messageId);
+        Task<ApiResponse> SendMessageToAdminAsync(string playerId, string content);
+        Task<(ApiResponse Response, List<object> Messages)> GetInboxAsync(string adminId);
+        Task<(ApiResponse Response, List<object> Messages)> GetReadMessagesAsync(string adminId);
+        Task<(ApiResponse Response, List<object> Messages)> GetUnreadMessagesAsync(string adminId);
+        Task<ApiResponse> MarkAsReadAsync(int messageId);
     }
 }

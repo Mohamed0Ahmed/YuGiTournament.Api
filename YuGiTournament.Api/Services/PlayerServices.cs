@@ -32,7 +32,7 @@ namespace YuGiTournament.Api.Services
         {
             var player = await _context.Players.FindAsync(playerId);
             if (player == null)
-                return new ApiResponse("مفيش هنا لاعب بالاسم ده");
+                return new ApiResponse(false, "مفيش هنا لاعب بالاسم ده");
 
             var playerMatches = await _context.Matches
                 .Where(m => m.Player1Id == playerId || m.Player2Id == playerId)
@@ -50,7 +50,7 @@ namespace YuGiTournament.Api.Services
             _playerRepository.Delete(player);
 
             await _context.SaveChangesAsync();
-            return new ApiResponse($"تم حذف اللاعب {player.FullName} وكل مبارياته والجولات المرتبطة بيه.");
+            return new ApiResponse(true, $"تم حذف اللاعب {player.FullName} وكل مبارياته والجولات المرتبطة بيه.");
         }
 
         public async Task<Player> AddPlayerAsync(string fullName)

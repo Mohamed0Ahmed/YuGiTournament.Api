@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
@@ -6,6 +7,7 @@ using System.Security.Claims;
 using System.Text;
 using YuGiTournament.Api.Identities;
 using YuGiTournament.Api.DTOs;
+using YuGiTournament.Api.ApiResponses;
 
 namespace YuGiTournament.Api.Controllers
 {
@@ -14,13 +16,12 @@ namespace YuGiTournament.Api.Controllers
     public class AuthController : ControllerBase
     {
         private readonly UserManager<ApplicationUser> _userManager;
-        private readonly SignInManager<ApplicationUser> _signInManager;
+
         private readonly IConfiguration _configuration;
 
-        public AuthController(UserManager<ApplicationUser> userManager, SignInManager<ApplicationUser> signInManager, IConfiguration configuration)
+        public AuthController(UserManager<ApplicationUser> userManager, IConfiguration configuration)
         {
             _userManager = userManager;
-            _signInManager = signInManager;
             _configuration = configuration;
         }
 
@@ -30,40 +31,36 @@ namespace YuGiTournament.Api.Controllers
             var user = await _userManager.FindByEmailAsync(model.Email);
             if (user == null || !(await _userManager.CheckPasswordAsync(user, model.Password)))
             {
-                return Unauthorized(new { message = "Invalid email or password." });
+                return Unauthorized(new ApiResponse(false, "Invalid email or password."));
             }
 
             var roles = await _userManager.GetRolesAsync(user);
             var token = GenerateJwtToken(user, roles);
-
-            return Ok(new { Token = token });
+            return Ok(new { Success = true, Message = "Login successful.", Token = token });
         }
 
         [HttpPost("player-login")]
         public async Task<IActionResult> PlayerLogin([FromBody] PlayerLoginDto model)
         {
-            var user = await _userManager.FindByNameAsync(model.PhoneNumber); // البحث برقم الموبايل (UserName)
+            var user = await _userManager.FindByNameAsync(model.PhoneNumber);
             if (user == null || !(await _userManager.CheckPasswordAsync(user, model.Password)))
             {
-                return Unauthorized(new { message = "Invalid phone number or password." });
+                return Unauthorized(new ApiResponse(false, "Invalid phone number or password."));
             }
 
             var roles = await _userManager.GetRolesAsync(user);
             var token = GenerateJwtToken(user, roles);
-
-            return Ok(new { Token = token });
+            return Ok(new { Success = true, Message = "Login successful.", Token = token });
         }
 
-
-
-        [HttpPost("register-player")] 
+        [HttpPost("register-player")]
         public async Task<IActionResult> RegisterPlayer([FromBody] RegisterPlayerDto model)
         {
             var user = new ApplicationUser
             {
                 UserName = model.PhoneNumber,
                 PhoneNumber = model.PhoneNumber,
-                Email = $"{model.PhoneNumber}@yugi.com", 
+                Email = $"{model.PhoneNumber}@yugi.com",
                 EmailConfirmed = true,
                 FName = model.FirstName,
                 LName = model.LastName
@@ -72,23 +69,38 @@ namespace YuGiTournament.Api.Controllers
             var result = await _userManager.CreateAsync(user, model.Password);
             if (!result.Succeeded)
             {
-                return BadRequest(result.Errors);
+                var errorMessage = string.Join(", ", result.Errors.Select(e => e.Description));
+                return BadRequest(new ApiResponse(false, errorMessage));
             }
 
-         
-
             await _userManager.AddToRoleAsync(user, "Player");
-
-            return Ok(new { message = "تم تسجيلك بنجاح" });
+            return Ok(new ApiResponse(true, "Player registered successfully."));
         }
 
+        [HttpPost("reset-password")]
+        public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordDto model)
+        {
+            var user = await _userManager.FindByNameAsync(model.PhoneNumber);
+            if (user == null)
+            {
+                return NotFound(new ApiResponse(false, "Player not found."));
+            }
 
+            var token = await _userManager.GeneratePasswordResetTokenAsync(user);
+            var result = await _userManager.ResetPasswordAsync(user, token, model.NewPassword);
+            if (!result.Succeeded)
+            {
+                var errorMessage = string.Join(", ", result.Errors.Select(e => e.Description));
+                return BadRequest(new ApiResponse(false, errorMessage));
+            }
 
+            return Ok(new ApiResponse(true, "Password reset successfully."));
+        }
 
         [HttpPost("logout")]
         public IActionResult Logout()
         {
-            return Ok("Logout successful. Just remove the token on client side.");
+            return Ok(new ApiResponse(true, "Logout successful. Just remove the token on client side."));
         }
 
         //****************************************
@@ -127,4 +139,5 @@ namespace YuGiTournament.Api.Controllers
         }
     }
 
+   
 }

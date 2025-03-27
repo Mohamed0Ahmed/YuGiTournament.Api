@@ -8,7 +8,7 @@ namespace YuGiTournament.Api.Services
     {
         private readonly ApplicationDbContext _context;
 
-        public LeagueResetService(ApplicationDbContext context) 
+        public LeagueResetService(ApplicationDbContext context)
         {
             _context = context;
         }
@@ -18,10 +18,12 @@ namespace YuGiTournament.Api.Services
             await _context.Database.ExecuteSqlRawAsync("DELETE FROM Matches");
             await _context.Database.ExecuteSqlRawAsync("DELETE FROM MatchRounds");
             await _context.Database.ExecuteSqlRawAsync("DELETE FROM Players");
+            await _context.Database.ExecuteSqlRawAsync("DELETE FROM Messages");
 
             await _context.Database.ExecuteSqlRawAsync("DBCC CHECKIDENT ('Matches', RESEED, 0)");
             await _context.Database.ExecuteSqlRawAsync("DBCC CHECKIDENT ('MatchRounds', RESEED, 0)");
             await _context.Database.ExecuteSqlRawAsync("DBCC CHECKIDENT ('Players', RESEED, 0)");
+            await _context.Database.ExecuteSqlRawAsync("DBCC CHECKIDENT ('Messages', RESEED, 0)");
         }
     }
 }

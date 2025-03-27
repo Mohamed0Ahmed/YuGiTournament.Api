@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Mvc;
 using YuGiTournament.Api.Services.Abstractions;
 using System.Security.Claims;
+using YuGiTournament.Api.ApiResponses;
 using YuGiTournament.Api.DTOs;
 
 namespace YuGiTournament.Api.Controllers
@@ -24,18 +25,16 @@ namespace YuGiTournament.Api.Controllers
             var playerId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
             if (string.IsNullOrEmpty(playerId))
             {
-                return Unauthorized();
+                return Unauthorized(new ApiResponse(false, "Unauthorized."));
             }
 
-            try
+            var response = await _messageService.SendMessageToAdminAsync(playerId, request.Content);
+            if (!response.Success)
             {
-                await _messageService.SendMessageToAdminAsync(playerId, request.Content);
-                return Ok(new { message = "Message sent to admin." });
+                return NotFound(response);
             }
-            catch (Exception ex)
-            {
-                return NotFound(new { message = ex.Message });
-            }
+
+            return Ok(response);
         }
 
         [Authorize(Roles = "Admin")]
@@ -45,28 +44,54 @@ namespace YuGiTournament.Api.Controllers
             var adminId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
             if (string.IsNullOrEmpty(adminId))
             {
-                return Unauthorized();
+                return Unauthorized(new ApiResponse(false, "Unauthorized."));
             }
 
-            var messages = await _messageService.GetInboxAsync(adminId);
-            return Ok(messages);
+            var (response, messages) = await _messageService.GetInboxAsync(adminId);
+            return Ok(new { response.Success,   response.Message, Messages = messages });
+        }
+
+        [Authorize(Roles = "Admin")]
+        [HttpGet("read-messages")]
+        public async Task<IActionResult> GetReadMessages()
+        {
+            var adminId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(adminId))
+            {
+                return Unauthorized(new ApiResponse(false, "Unauthorized."));
+            }
+
+            var (response, messages) = await _messageService.GetReadMessagesAsync(adminId);
+            return Ok(new { response.Success,  response.Message, Messages = messages });
+        }
+
+        [Authorize(Roles = "Admin")]
+        [HttpGet("unread-messages")]
+        public async Task<IActionResult> GetUnreadMessages()
+        {
+            var adminId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(adminId))
+            {
+                return Unauthorized(new ApiResponse(false, "Unauthorized."));
+            }
+
+            var (response, messages) = await _messageService.GetUnreadMessagesAsync(adminId);
+            return Ok(new {  response.Success, response.Message, Messages = messages });
         }
 
         [Authorize(Roles = "Admin")]
         [HttpPost("mark/{messageId}")]
         public async Task<IActionResult> MarkAsRead(int messageId)
         {
-            try
+            var response = await _messageService.MarkAsReadAsync(messageId);
+            if (!response.Success)
             {
-                await _messageService.MarkAsReadAsync(messageId);
-                return Ok(new { message = "Message marked as read." });
+                return NotFound(response);
             }
-            catch (Exception ex)
-            {
-                return NotFound(new { message = ex.Message });
-            }
+
+            return Ok(response);
         }
     }
 
-    
+  
 }

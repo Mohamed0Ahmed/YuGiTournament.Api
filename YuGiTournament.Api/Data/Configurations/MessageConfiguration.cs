@@ -10,6 +10,8 @@ namespace YuGiTournament.Api.Data.Configurations
         {
             builder.HasKey(m => m.Id);
             builder.Property(m => m.SenderId).IsRequired();
+            builder.Property(m => m.SenderFullName).IsRequired();
+            builder.Property(m => m.SenderPhoneNumber).IsRequired();
             builder.Property(m => m.Content).IsRequired();
             builder.Property(m => m.IsRead).IsRequired();
             builder.Property(m => m.SentAt).IsRequired();

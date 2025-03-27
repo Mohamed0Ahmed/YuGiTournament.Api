@@ -3,14 +3,14 @@
     public class ApiResponse
     {
         public bool Success { get; set; }
-        public string? ErrorMessage { get; set; }
+        public string? Message { get; set; }
 
         public ApiResponse() { }
 
-        public ApiResponse(string errorMessage)
+        public ApiResponse(bool success, string message)
         {
-            Success = false;
-            ErrorMessage = errorMessage;
+            Success = success;
+            Message = message;
         }
     }
 }

@@ -51,16 +51,16 @@ namespace YuGiTournament.Api.Services
         {
             var match = await _context.Matches.FindAsync(matchId);
             if (match == null)
-                return new ApiResponse("الماتش ده مش موجود");
+                return new ApiResponse(false, "الماتش ده مش موجود");
 
             var matchRounds = await _context.MatchRounds.Where(mr => mr.MatchId == matchId).ToListAsync();
             if (!matchRounds.Any())
-                return new ApiResponse("الماتش لسه متلعبش");
+                return new ApiResponse(false, "الماتش لسه متلعبش");
 
             var player1 = await _context.Players.FindAsync(match.Player1Id);
             var player2 = await _context.Players.FindAsync(match.Player2Id);
             if (player1 == null || player2 == null)
-                return new ApiResponse("اللاعبين غير موجودين");
+                return new ApiResponse(false, "اللاعبين غير موجودين");
 
             foreach (var round in matchRounds)
             {
@@ -93,23 +93,23 @@ namespace YuGiTournament.Api.Services
             player1.UpdateStats();
             player2.UpdateStats();
             await _context.SaveChangesAsync();
-            return new ApiResponse("تم إعادة تعيين الماتش من البداية.");
+            return new ApiResponse(true, "تم إعادة تعيين الماتش من البداية.");
         }
 
         public async Task<ApiResponse> UpdateMatchResultAsync(int matchId, MatchResultDto resultDto)
         {
             var match = await _context.Matches.FindAsync(matchId);
             if (match == null)
-                return new ApiResponse("No Match Here");
+                return new ApiResponse(false, "No Match Here");
 
             var player1 = await _context.Players.FindAsync(match.Player1Id);
             var player2 = await _context.Players.FindAsync(match.Player2Id);
             if (player1 == null || player2 == null)
-                return new ApiResponse("All Players Must Be There");
+                return new ApiResponse(false, "All Players Must Be There");
 
             int matchCount = await _context.MatchRounds.CountAsync(mr => mr.MatchId == matchId);
             if (matchCount >= 5)
-                return new ApiResponse("خلاص بقي هم لعبوا ال 5 ماتشات والله");
+                return new ApiResponse(false, "خلاص بقي هم لعبوا ال 5 ماتشات والله");
 
             var newRound = new MatchRound { MatchId = matchId };
             string responseMessage;
@@ -144,7 +144,7 @@ namespace YuGiTournament.Api.Services
             }
             else
             {
-                return new ApiResponse("Invalid winnerId. The winner must be one of the match players");
+                return new ApiResponse(false,"Invalid winnerId. The winner must be one of the match players");
             }
 
             _context.MatchRounds.Add(newRound);
@@ -152,7 +152,7 @@ namespace YuGiTournament.Api.Services
             player1.UpdateStats();
             player2.UpdateStats();
             await _context.SaveChangesAsync();
-            return new ApiResponse(responseMessage);
+            return new ApiResponse(true,responseMessage);
         }
 
 
