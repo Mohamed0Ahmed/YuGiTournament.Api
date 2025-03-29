@@ -34,6 +34,16 @@ namespace YuGiTournament.Api
                            .AddEntityFrameworkStores<ApplicationDbContext>()
                            .AddDefaultTokenProviders();
 
+            builder.Services.AddCors(options =>
+            {
+                options.AddPolicy("AllowFrontend", builder =>
+                {
+                    builder.WithOrigins("https://mohamed0ahmed.github.io", "http://localhost:4200")
+                           .AllowAnyMethod()
+                           .AllowAnyHeader();
+                });
+            });
+
 
             builder.Services.Configure<IdentityOptions>(options =>
             {
@@ -115,7 +125,7 @@ namespace YuGiTournament.Api
 
             app.UseAuthentication();
             app.UseAuthorization();
-
+            app.UseCors("AllowFrontend");
             app.MapControllers();
 
             #endregion

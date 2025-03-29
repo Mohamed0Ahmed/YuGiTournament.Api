@@ -49,57 +49,73 @@ namespace YuGiTournament.Api.Services
                 .FirstOrDefaultAsync();
         }
 
+
         public async Task<ApiResponse> ResetMatchByIdAsync(int matchId)
         {
-
-            var match = await _unitOfWork.GetRepository<Match>().Find(match => match.MatchId == matchId).FirstOrDefaultAsync();
-            if (match == null)
-                return new ApiResponse(false, "الماتش ده مش موجود");
-
-            var matchRounds = await _unitOfWork.GetRepository<MatchRound>().GetAll().Where(mr => mr.MatchId == matchId).ToListAsync();
-            if (!matchRounds.Any())
-                return new ApiResponse(false, "الماتش لسه متلعبش");
-
-
-            var player1 = await _unitOfWork.GetRepository<Player>().Find(player => player.PlayerId == match.Player1Id).FirstOrDefaultAsync();
-            var player2 = await _unitOfWork.GetRepository<Player>().Find(player => player.PlayerId == match.Player2Id).FirstOrDefaultAsync();
-            if (player1 == null || player2 == null)
-                return new ApiResponse(false, "اللاعبين غير موجودين");
-
-            foreach (var round in matchRounds)
+            try
             {
-                switch (round.WinnerId)
+                await _unitOfWork.BeginTransactionAsync();
+
+                var match = await _unitOfWork.GetRepository<Match>()
+                    .GetAll()
+                    .Include(m => m.Player1)
+                    .Include(m => m.Player2)
+                    .Include(m => m.Rounds)
+                    .FirstOrDefaultAsync(m => m.MatchId == matchId);
+
+                if (match == null)
+                    return new ApiResponse(false, "الماتش ده مش موجود");
+
+                if (!match.Rounds.Any())
+                    return new ApiResponse(false, "الماتش لسه متلعبش");
+
+                var player1 = match.Player1;
+                var player2 = match.Player2;
+
+                if (player1 == null || player2 == null)
+                    return new ApiResponse(false, "اللاعبين غير موجودين");
+
+                foreach (var round in match.Rounds)
                 {
-                    case var winnerId when winnerId == player1.PlayerId:
-                        player1.Wins--;
-                        player1.Points--;
-                        player2.Losses--;
-                        break;
-                    case var winnerId when winnerId == player2.PlayerId:
-                        player2.Wins--;
-
-
-                        player2.Points--;
-                        player1.Losses--;
-                        break;
-                    case null when round.IsDraw:
-                        player1.Draws--;
-                        player2.Draws--;
-                        player1.Points -= 0.5;
-                        player2.Points -= 0.5;
-                        break;
+                    switch (round.WinnerId)
+                    {
+                        case var winnerId when winnerId == player1.PlayerId:
+                            player1.Wins--;
+                            player1.Points--;
+                            player2.Losses--;
+                            break;
+                        case var winnerId when winnerId == player2.PlayerId:
+                            player2.Wins--;
+                            player2.Points--;
+                            player1.Losses--;
+                            break;
+                        case null when round.IsDraw:
+                            player1.Draws--;
+                            player2.Draws--;
+                            player1.Points -= 0.5;
+                            player2.Points -= 0.5;
+                            break;
+                    }
                 }
+
+                _unitOfWork.GetRepository<MatchRound>().DeleteRange(match.Rounds);
+                match.Score1 = 0;
+                match.Score2 = 0;
+                match.IsCompleted = false;
+
+                player1.UpdateStats();
+                player2.UpdateStats();
+
+                await _unitOfWork.SaveChangesAsync();
+                await _unitOfWork.CommitAsync();
+
+                return new ApiResponse(true, "تم إعادة تعيين الماتش من البداية.");
             }
-
-            _unitOfWork.GetRepository<MatchRound>().DeleteRange(matchRounds);
-            match.Score1 = 0;
-            match.Score2 = 0;
-            match.IsCompleted = false;
-
-            player1.UpdateStats();
-            player2.UpdateStats();
-            await _unitOfWork.SaveChangesAsync();
-            return new ApiResponse(true, "تم إعادة تعيين الماتش من البداية.");
+            catch (Exception ex)
+            {
+                await _unitOfWork.RollbackAsync();
+                return new ApiResponse(false, $"حصل خطأ أثناء إعادة تعيين الماتش: {ex.Message}");
+            }
         }
 
         public async Task<ApiResponse> UpdateMatchResultAsync(int matchId, MatchResultDto resultDto)

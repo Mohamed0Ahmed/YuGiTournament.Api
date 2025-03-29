@@ -7,5 +7,8 @@ namespace YuGiTournament.Api.Abstractions
         IGenericRepository<T> GetRepository<T>() where T : class;
         ApplicationDbContext GetDbContext();
         Task<int> SaveChangesAsync();
+        Task BeginTransactionAsync();
+        Task CommitAsync();
+        Task RollbackAsync();
     }
 }

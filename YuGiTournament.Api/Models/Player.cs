@@ -19,6 +19,7 @@
         {
             MatchesPlayed = Wins + Losses + Draws;
             WinRate = MatchesPlayed > 0 ? (double)Wins / MatchesPlayed * 100 : 0;
+            Points = Wins + ((double)Draws / 2);
         }
     }
 }
