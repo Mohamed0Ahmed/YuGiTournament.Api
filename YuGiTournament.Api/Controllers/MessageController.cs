@@ -48,7 +48,7 @@ namespace YuGiTournament.Api.Controllers
             }
 
             var (response, messages) = await _messageService.GetInboxAsync(adminId);
-            return Ok(new { response.Success,   response.Message, Messages = messages });
+            return Ok(new { response.Success, response.Message, Messages = messages });
         }
 
         [Authorize(Roles = "Admin")]
@@ -62,7 +62,7 @@ namespace YuGiTournament.Api.Controllers
             }
 
             var (response, messages) = await _messageService.GetReadMessagesAsync(adminId);
-            return Ok(new { response.Success,  response.Message, Messages = messages });
+            return Ok(new { response.Success, response.Message, Messages = messages });
         }
 
         [Authorize(Roles = "Admin")]
@@ -76,14 +76,14 @@ namespace YuGiTournament.Api.Controllers
             }
 
             var (response, messages) = await _messageService.GetUnreadMessagesAsync(adminId);
-            return Ok(new {  response.Success, response.Message, Messages = messages });
+            return Ok(new { response.Success, response.Message, Messages = messages });
         }
 
         [Authorize(Roles = "Admin")]
         [HttpPost("mark/{messageId}")]
-        public async Task<IActionResult> MarkAsRead(int messageId)
+        public async Task<IActionResult> MarkAsRead(int messageId, [FromBody] MarkMessageDto request)
         {
-            var response = await _messageService.MarkAsReadAsync(messageId);
+            var response = await _messageService.MarkAsync(messageId, request.Marked);
             if (!response.Success)
             {
                 return NotFound(response);
@@ -93,5 +93,5 @@ namespace YuGiTournament.Api.Controllers
         }
     }
 
-  
+
 }

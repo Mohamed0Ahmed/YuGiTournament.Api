@@ -7,28 +7,28 @@ namespace YuGiTournament.Api.Repositories
 {
     public class GenericRepository<T> : IGenericRepository<T> where T : class
     {
-        public readonly ApplicationDbContext _context;
-        public readonly DbSet<T> _dbSet;
+        private readonly ApplicationDbContext _context;
+        private readonly DbSet<T> _dbSet;
 
-        public GenericRepository(ApplicationDbContext context)
+        public GenericRepository(IUnitOfWork unitOfWork)
         {
-            _context = context;
-            _dbSet = context.Set<T>();
+            _context = unitOfWork.GetDbContext();
+            _dbSet = _context.Set<T>();
         }
 
-        public async Task<IEnumerable<T>> GetAllAsync()
+        public IQueryable<T> GetAll()
         {
-            return await _dbSet.ToListAsync();
+            return _dbSet.AsQueryable();
         }
 
-        public async Task<T?> GetByIdAsync(int id)
+        public async Task<T?> GetByIdAsync(string id)
         {
             return await _dbSet.FindAsync(id);
         }
 
-        public async Task<IEnumerable<T>> FindAsync(Expression<Func<T, bool>> predicate)
+        public IQueryable<T> Find(Expression<Func<T, bool>> predicate)
         {
-            return await _dbSet.Where(predicate).ToListAsync();
+            return _dbSet.Where(predicate);
         }
 
         public async Task AddAsync(T entity)
@@ -36,9 +36,19 @@ namespace YuGiTournament.Api.Repositories
             await _dbSet.AddAsync(entity);
         }
 
+        public async Task AddRangeAsync(IEnumerable<T> entities)
+        {
+            await _dbSet.AddRangeAsync(entities);
+        }
+
         public void Update(T entity)
         {
             _dbSet.Update(entity);
+        }
+
+        public void UpdateRange(IEnumerable<T> entities)
+        {
+            _dbSet.UpdateRange(entities);
         }
 
         public void Delete(T entity)
@@ -46,9 +56,9 @@ namespace YuGiTournament.Api.Repositories
             _dbSet.Remove(entity);
         }
 
-        public async Task SaveChangesAsync()
+        public void DeleteRange(IEnumerable<T> entities)
         {
-            await _context.SaveChangesAsync();
+            _dbSet.RemoveRange(entities);
         }
     }
 }

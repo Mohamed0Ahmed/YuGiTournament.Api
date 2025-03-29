@@ -8,6 +8,6 @@ namespace YuGiTournament.Api.Services.Abstractions
         Task<(ApiResponse Response, List<object> Messages)> GetInboxAsync(string adminId);
         Task<(ApiResponse Response, List<object> Messages)> GetReadMessagesAsync(string adminId);
         Task<(ApiResponse Response, List<object> Messages)> GetUnreadMessagesAsync(string adminId);
-        Task<ApiResponse> MarkAsReadAsync(int messageId);
+        Task<ApiResponse> MarkAsync(int messageId, bool marked);
     }
 }

@@ -1,6 +1,5 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using YuGiTournament.Api.Models;
 using YuGiTournament.Api.Services.Abstractions;
 
 namespace YuGiTournament.Api.Controllers
@@ -17,15 +16,11 @@ namespace YuGiTournament.Api.Controllers
         }
 
         [HttpPost]
-        [Authorize]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> AddPlayer([FromBody] string fullName)
         {
-            await _playerService.AddPlayerAsync(fullName);
-            var player = new Player
-            {
-                FullName = fullName,
-            };
-            return Ok(player);
+            var result = await _playerService.AddPlayerAsync(fullName);
+            return Ok(result);
         }
 
         [HttpGet]
@@ -35,11 +30,17 @@ namespace YuGiTournament.Api.Controllers
             return Ok(players);
         }
 
-        [Authorize]
+        [HttpGet("ranking")]
+        public async Task<IActionResult> GetRanking()
+        {
+            var ranking = await _playerService.GetPlayersRankingAsync();
+            return Ok(ranking);
+        }
+
+        [Authorize(Roles = "Admin")]
         [HttpDelete("{playerId}")]
         public async Task<IActionResult> DeletePlayer(int playerId)
         {
-            Console.WriteLine($"DeletePlayer called with playerId: {playerId}");
             var result = await _playerService.DeletePlayerAsync(playerId);
             return Ok(result);
         }

@@ -49,7 +49,7 @@ namespace YuGiTournament.Api.Controllers
 
         [Authorize(Roles = "Admin")]
         [HttpDelete("reset/{matchId}")]
-        public async Task<IActionResult> ResetMatches( int matchId)
+        public async Task<IActionResult> ResetMatches(int matchId)
         {
             var success = await _matchService.ResetMatchByIdAsync(matchId);
 

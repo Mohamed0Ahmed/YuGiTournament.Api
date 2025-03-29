@@ -1,29 +1,30 @@
 ﻿using Microsoft.EntityFrameworkCore;
-using YuGiTournament.Api.Data;
 using YuGiTournament.Api.Services.Abstractions;
+using YuGiTournament.Api.Abstractions;
 
 namespace YuGiTournament.Api.Services
 {
     public class LeagueResetService : ILeagueResetService
     {
-        private readonly ApplicationDbContext _context;
+        private readonly IUnitOfWork _unitOfWork;
 
-        public LeagueResetService(ApplicationDbContext context)
+        public LeagueResetService(IUnitOfWork unitOfWork)
         {
-            _context = context;
+            _unitOfWork = unitOfWork;
         }
 
         public async Task ResetLeagueAsync()
         {
-            await _context.Database.ExecuteSqlRawAsync("DELETE FROM Matches");
-            await _context.Database.ExecuteSqlRawAsync("DELETE FROM MatchRounds");
-            await _context.Database.ExecuteSqlRawAsync("DELETE FROM Players");
-            await _context.Database.ExecuteSqlRawAsync("DELETE FROM Messages");
+            await _unitOfWork.GetDbContext().Database.ExecuteSqlRawAsync("DELETE FROM Matches");
+            await _unitOfWork.GetDbContext().Database.ExecuteSqlRawAsync("DELETE FROM MatchRounds");
+            await _unitOfWork.GetDbContext().Database.ExecuteSqlRawAsync("DELETE FROM Players");
+            await _unitOfWork.GetDbContext().Database.ExecuteSqlRawAsync("DELETE FROM Messages");
 
-            await _context.Database.ExecuteSqlRawAsync("DBCC CHECKIDENT ('Matches', RESEED, 0)");
-            await _context.Database.ExecuteSqlRawAsync("DBCC CHECKIDENT ('MatchRounds', RESEED, 0)");
-            await _context.Database.ExecuteSqlRawAsync("DBCC CHECKIDENT ('Players', RESEED, 0)");
-            await _context.Database.ExecuteSqlRawAsync("DBCC CHECKIDENT ('Messages', RESEED, 0)");
+            await _unitOfWork.GetDbContext().Database.ExecuteSqlRawAsync("DBCC CHECKIDENT ('Matches', RESEED, 0)");
+            await _unitOfWork.GetDbContext().Database.ExecuteSqlRawAsync("DBCC CHECKIDENT ('MatchRounds', RESEED, 0)");
+            await _unitOfWork.GetDbContext().Database.ExecuteSqlRawAsync("DBCC CHECKIDENT ('Players', RESEED, 0)");
+            await _unitOfWork.GetDbContext().Database.ExecuteSqlRawAsync("DBCC CHECKIDENT ('Messages', RESEED, 0)");
         }
     }
 }
+

@@ -8,12 +8,12 @@
         public int Losses { get; set; }
         public int Draws { get; set; }
         public double Points { get; set; }
-
         public int MatchesPlayed { get; set; }
+        public int Rank { get; set; }
 
         public double WinRate { get; set; }
 
-        public ICollection<Match> Matches { get; set; } =[];
+
 
         public void UpdateStats()
         {

@@ -1,29 +1,30 @@
 ﻿using Microsoft.EntityFrameworkCore;
-using YuGiTournament.Api.Data;
 using YuGiTournament.Api.Models;
 using YuGiTournament.Api.Services.Abstractions;
 using YuGiTournament.Api.ApiResponses;
+using YuGiTournament.Api.Abstractions;
+using YuGiTournament.Api.Identities;
 
 namespace YuGiTournament.Api.Services
 {
     public class MessageService : IMessageService
     {
-        private readonly ApplicationDbContext _context;
+        private readonly IUnitOfWork _unitOfWork;
 
-        public MessageService(ApplicationDbContext context)
+        public MessageService(IUnitOfWork unitOfWork)
         {
-            _context = context;
+            _unitOfWork = unitOfWork;
         }
 
         public async Task<ApiResponse> SendMessageToAdminAsync(string playerId, string content)
         {
-            var admin = _context.Users.FirstOrDefault(u => u.Email == "admin@yugi.com");
+            var admin = _unitOfWork.GetRepository<ApplicationUser>().GetAll().FirstOrDefault(u => u.Email == "admin@yugi.com");
             if (admin == null)
             {
                 return new ApiResponse(false, "Admin not found.");
             }
 
-            var player = await _context.Users.FindAsync(playerId);
+            var player = await _unitOfWork.GetRepository<ApplicationUser>().GetByIdAsync(playerId);
             if (player == null)
             {
                 return new ApiResponse(false, "Player not found.");
@@ -39,14 +40,15 @@ namespace YuGiTournament.Api.Services
                 SentAt = DateTime.UtcNow
             };
 
-            _context.Messages.Add(message);
-            await _context.SaveChangesAsync();
+            await _unitOfWork.GetRepository<Message>().AddAsync(message);
+            await _unitOfWork.SaveChangesAsync();
             return new ApiResponse(true, "Message sent to admin.");
         }
 
         public async Task<(ApiResponse Response, List<object> Messages)> GetInboxAsync(string adminId)
         {
-            var messages = await _context.Messages
+            var messages = await _unitOfWork.GetRepository<Message>()
+                .GetAll()
                 .Where(m => m.SenderId != adminId)
                 .Select(m => new
                 {
@@ -65,7 +67,8 @@ namespace YuGiTournament.Api.Services
 
         public async Task<(ApiResponse Response, List<object> Messages)> GetReadMessagesAsync(string adminId)
         {
-            var messages = await _context.Messages
+            var messages = await _unitOfWork.GetRepository<Message>()
+                .GetAll()
                 .Where(m => m.SenderId != adminId && m.IsRead)
                 .Select(m => new
                 {
@@ -84,7 +87,8 @@ namespace YuGiTournament.Api.Services
 
         public async Task<(ApiResponse Response, List<object> Messages)> GetUnreadMessagesAsync(string adminId)
         {
-            var messages = await _context.Messages
+            var messages = await _unitOfWork.GetRepository<Message>()
+                .GetAll()
                 .Where(m => m.SenderId != adminId && !m.IsRead)
                 .Select(m => new
                 {
@@ -101,17 +105,33 @@ namespace YuGiTournament.Api.Services
             return (new ApiResponse(true, "Unread messages retrieved successfully."), messages.Cast<object>().ToList());
         }
 
-        public async Task<ApiResponse> MarkAsReadAsync(int messageId)
+        public async Task<ApiResponse> MarkAsync(int messageId, bool marked)
         {
-            var message = _context.Messages.FirstOrDefault(m => m.Id == messageId);
+            var message = _unitOfWork.GetRepository<Message>().GetAll().FirstOrDefault(m => m.Id == messageId);
             if (message == null)
-            {
                 return new ApiResponse(false, "Message not found.");
-            }
 
-            message.IsRead = true;
-            await _context.SaveChangesAsync();
-            return new ApiResponse(true, "Message marked as read.");
+            if (marked)
+            {
+                if (message.IsRead == true)
+                    return new ApiResponse(false, "This message is already marked as read.");
+
+                message.IsRead = true;
+                await _unitOfWork.SaveChangesAsync();
+                return new ApiResponse(true, "Message marked as read.");
+            }
+            else
+            {
+                if (message.IsRead == false)
+                    return new ApiResponse(false, "This message is already marked as unread.");
+
+                message.IsRead = false;
+                await _unitOfWork.SaveChangesAsync();
+                return new ApiResponse(true, "Message marked as unread.");
+            }
         }
+
+
     }
 }
+

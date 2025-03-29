@@ -21,12 +21,11 @@ namespace YuGiTournament.Api
             #region Configure Services
 
             builder.Services.AddScoped(typeof(IGenericRepository<>), typeof(GenericRepository<>));
-            builder.Services.AddScoped<IPlayerRepository, PlayerRepository>();
-            builder.Services.AddScoped<IMatchRepository, MatchRepository>();
             builder.Services.AddScoped<IMatchService, MatchService>();
             builder.Services.AddScoped<IPlayerService, PlayerService>();
             builder.Services.AddScoped<ILeagueResetService, LeagueResetService>();
             builder.Services.AddScoped<IMessageService, MessageService>();
+            builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 
             builder.Services.AddDbContext<ApplicationDbContext>(options =>
                 options.UseSqlServer(builder.Configuration.GetConnectionString("YuGiContext")));
@@ -35,14 +34,14 @@ namespace YuGiTournament.Api
                            .AddEntityFrameworkStores<ApplicationDbContext>()
                            .AddDefaultTokenProviders();
 
-            
+
             builder.Services.Configure<IdentityOptions>(options =>
             {
-                options.Password.RequireDigit = false; 
-                options.Password.RequireLowercase = false; 
-                options.Password.RequireUppercase = false; 
-                options.Password.RequireNonAlphanumeric = false; 
-                options.Password.RequiredLength = 1; 
+                options.Password.RequireDigit = false;
+                options.Password.RequireLowercase = false;
+                options.Password.RequireUppercase = false;
+                options.Password.RequireNonAlphanumeric = false;
+                options.Password.RequiredLength = 1;
                 options.Password.RequiredUniqueChars = 1;
             });
 

@@ -24,7 +24,10 @@ namespace YuGiTournament.Api.Data.Configurations
         
           
             player.Property(p => p.WinRate)
-                  .HasDefaultValue(0);
+                  .HasDefaultValue(0);  
+            
+            player.Property(p => p.Rank)
+                  .IsRequired();
 
             player.Property(p => p.Wins)
                   .HasDefaultValue(0); 
