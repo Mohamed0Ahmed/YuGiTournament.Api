@@ -12,8 +12,8 @@ using YuGiTournament.Api.Data;
 namespace YuGiTournament.Api.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20250326140322_AddMessageTable")]
-    partial class AddMessageTable
+    [Migration("20250329130819_InitialCreate")]
+    partial class InitialCreate
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -253,9 +253,6 @@ namespace YuGiTournament.Api.Migrations
                     b.Property<int>("Player2Id")
                         .HasColumnType("int");
 
-                    b.Property<int?>("PlayerId")
-                        .HasColumnType("int");
-
                     b.Property<double>("Score1")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("float")
@@ -271,8 +268,6 @@ namespace YuGiTournament.Api.Migrations
                     b.HasIndex("Player1Id");
 
                     b.HasIndex("Player2Id");
-
-                    b.HasIndex("PlayerId");
 
                     b.ToTable("Matches");
                 });
@@ -316,7 +311,15 @@ namespace YuGiTournament.Api.Migrations
                     b.Property<bool>("IsRead")
                         .HasColumnType("bit");
 
+                    b.Property<string>("SenderFullName")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<string>("SenderId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("SenderPhoneNumber")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
@@ -326,31 +329,6 @@ namespace YuGiTournament.Api.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("Messages");
-                });
-
-            modelBuilder.Entity("YuGiTournament.Api.Models.OtpCode", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("Code")
-                        .IsRequired()
-                        .HasMaxLength(6)
-                        .HasColumnType("nvarchar(6)");
-
-                    b.Property<DateTime>("ExpiryDate")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("UserId")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("OtpCodes");
                 });
 
             modelBuilder.Entity("YuGiTournament.Api.Models.Player", b =>
@@ -385,6 +363,9 @@ namespace YuGiTournament.Api.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("float")
                         .HasDefaultValue(0.0);
+
+                    b.Property<int>("Rank")
+                        .HasColumnType("int");
 
                     b.Property<double>("WinRate")
                         .ValueGeneratedOnAdd()
@@ -466,10 +447,6 @@ namespace YuGiTournament.Api.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.HasOne("YuGiTournament.Api.Models.Player", null)
-                        .WithMany("Matches")
-                        .HasForeignKey("PlayerId");
-
                     b.Navigation("Player1");
 
                     b.Navigation("Player2");
@@ -489,11 +466,6 @@ namespace YuGiTournament.Api.Migrations
             modelBuilder.Entity("YuGiTournament.Api.Models.Match", b =>
                 {
                     b.Navigation("Rounds");
-                });
-
-            modelBuilder.Entity("YuGiTournament.Api.Models.Player", b =>
-                {
-                    b.Navigation("Matches");
                 });
 #pragma warning restore 612, 618
         }

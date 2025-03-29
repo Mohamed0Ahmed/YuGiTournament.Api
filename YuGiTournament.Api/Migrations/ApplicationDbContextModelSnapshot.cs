@@ -250,9 +250,6 @@ namespace YuGiTournament.Api.Migrations
                     b.Property<int>("Player2Id")
                         .HasColumnType("int");
 
-                    b.Property<int?>("PlayerId")
-                        .HasColumnType("int");
-
                     b.Property<double>("Score1")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("float")
@@ -269,9 +266,7 @@ namespace YuGiTournament.Api.Migrations
 
                     b.HasIndex("Player2Id");
 
-                    b.HasIndex("PlayerId");
-
-                    b.ToTable("Matches", (string)null);
+                    b.ToTable("Matches");
                 });
 
             modelBuilder.Entity("YuGiTournament.Api.Models.MatchRound", b =>
@@ -295,7 +290,7 @@ namespace YuGiTournament.Api.Migrations
 
                     b.HasIndex("MatchId");
 
-                    b.ToTable("MatchRounds", (string)null);
+                    b.ToTable("MatchRounds");
                 });
 
             modelBuilder.Entity("YuGiTournament.Api.Models.Message", b =>
@@ -330,7 +325,7 @@ namespace YuGiTournament.Api.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Messages", (string)null);
+                    b.ToTable("Messages");
                 });
 
             modelBuilder.Entity("YuGiTournament.Api.Models.Player", b =>
@@ -366,6 +361,9 @@ namespace YuGiTournament.Api.Migrations
                         .HasColumnType("float")
                         .HasDefaultValue(0.0);
 
+                    b.Property<int>("Rank")
+                        .HasColumnType("int");
+
                     b.Property<double>("WinRate")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("float")
@@ -378,7 +376,7 @@ namespace YuGiTournament.Api.Migrations
 
                     b.HasKey("PlayerId");
 
-                    b.ToTable("Players", (string)null);
+                    b.ToTable("Players");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>
@@ -446,10 +444,6 @@ namespace YuGiTournament.Api.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.HasOne("YuGiTournament.Api.Models.Player", null)
-                        .WithMany("Matches")
-                        .HasForeignKey("PlayerId");
-
                     b.Navigation("Player1");
 
                     b.Navigation("Player2");
@@ -469,11 +463,6 @@ namespace YuGiTournament.Api.Migrations
             modelBuilder.Entity("YuGiTournament.Api.Models.Match", b =>
                 {
                     b.Navigation("Rounds");
-                });
-
-            modelBuilder.Entity("YuGiTournament.Api.Models.Player", b =>
-                {
-                    b.Navigation("Matches");
                 });
 #pragma warning restore 612, 618
         }

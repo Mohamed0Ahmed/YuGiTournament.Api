@@ -54,6 +54,24 @@ namespace YuGiTournament.Api.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "Messages",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    SenderId = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    SenderFullName = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    SenderPhoneNumber = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    Content = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    IsRead = table.Column<bool>(type: "bit", nullable: false),
+                    SentAt = table.Column<DateTime>(type: "datetime2", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Messages", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "Players",
                 columns: table => new
                 {
@@ -61,8 +79,12 @@ namespace YuGiTournament.Api.Migrations
                         .Annotation("SqlServer:Identity", "1, 1"),
                     FullName = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
                     Wins = table.Column<int>(type: "int", nullable: false, defaultValue: 0),
+                    Losses = table.Column<int>(type: "int", nullable: false, defaultValue: 0),
                     Draws = table.Column<int>(type: "int", nullable: false, defaultValue: 0),
-                    Points = table.Column<int>(type: "int", nullable: false, defaultValue: 0)
+                    Points = table.Column<double>(type: "float", nullable: false, defaultValue: 0.0),
+                    MatchesPlayed = table.Column<int>(type: "int", nullable: false, defaultValue: 0),
+                    Rank = table.Column<int>(type: "int", nullable: false),
+                    WinRate = table.Column<double>(type: "float", nullable: false, defaultValue: 0.0)
                 },
                 constraints: table =>
                 {
@@ -183,8 +205,8 @@ namespace YuGiTournament.Api.Migrations
                         .Annotation("SqlServer:Identity", "1, 1"),
                     Player1Id = table.Column<int>(type: "int", nullable: false),
                     Player2Id = table.Column<int>(type: "int", nullable: false),
-                    Score1 = table.Column<int>(type: "int", nullable: false, defaultValue: 0),
-                    Score2 = table.Column<int>(type: "int", nullable: false, defaultValue: 0),
+                    Score1 = table.Column<double>(type: "float", nullable: false, defaultValue: 0.0),
+                    Score2 = table.Column<double>(type: "float", nullable: false, defaultValue: 0.0),
                     IsCompleted = table.Column<bool>(type: "bit", nullable: false, defaultValue: false)
                 },
                 constraints: table =>
@@ -202,6 +224,27 @@ namespace YuGiTournament.Api.Migrations
                         principalTable: "Players",
                         principalColumn: "PlayerId",
                         onDelete: ReferentialAction.Restrict);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "MatchRounds",
+                columns: table => new
+                {
+                    MatchRoundId = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    MatchId = table.Column<int>(type: "int", nullable: false),
+                    WinnerId = table.Column<int>(type: "int", nullable: true),
+                    IsDraw = table.Column<bool>(type: "bit", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_MatchRounds", x => x.MatchRoundId);
+                    table.ForeignKey(
+                        name: "FK_MatchRounds_Matches_MatchId",
+                        column: x => x.MatchId,
+                        principalTable: "Matches",
+                        principalColumn: "MatchId",
+                        onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateIndex(
@@ -252,6 +295,11 @@ namespace YuGiTournament.Api.Migrations
                 name: "IX_Matches_Player2Id",
                 table: "Matches",
                 column: "Player2Id");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_MatchRounds_MatchId",
+                table: "MatchRounds",
+                column: "MatchId");
         }
 
         /// <inheritdoc />
@@ -273,13 +321,19 @@ namespace YuGiTournament.Api.Migrations
                 name: "AspNetUserTokens");
 
             migrationBuilder.DropTable(
-                name: "Matches");
+                name: "MatchRounds");
+
+            migrationBuilder.DropTable(
+                name: "Messages");
 
             migrationBuilder.DropTable(
                 name: "AspNetRoles");
 
             migrationBuilder.DropTable(
                 name: "AspNetUsers");
+
+            migrationBuilder.DropTable(
+                name: "Matches");
 
             migrationBuilder.DropTable(
                 name: "Players");
