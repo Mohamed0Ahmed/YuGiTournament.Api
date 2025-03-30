@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using YuGiTournament.Api.DTOs;
 using YuGiTournament.Api.Services.Abstractions;
 
 namespace YuGiTournament.Api.Controllers
@@ -17,9 +18,9 @@ namespace YuGiTournament.Api.Controllers
 
         [HttpPost]
         [Authorize(Roles = "Admin")]
-        public async Task<IActionResult> AddPlayer([FromBody] string fullName)
+        public async Task<IActionResult> AddPlayer([FromBody] PlayerAddedDto player)
         {
-            var result = await _playerService.AddPlayerAsync(fullName);
+            var result = await _playerService.AddPlayerAsync(player.FullName);
             return Ok(result);
         }
 

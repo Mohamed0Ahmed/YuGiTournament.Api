@@ -1,4 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using YuGiTournament.Api.Abstractions;
 using YuGiTournament.Api.ApiResponses;
 using YuGiTournament.Api.Models;
