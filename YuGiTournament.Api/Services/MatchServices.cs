@@ -27,7 +27,9 @@ namespace YuGiTournament.Api.Services
                     m.Score2,
                     m.IsCompleted,
                     Player1Name = m.Player1.FullName,
-                    Player2Name = m.Player2.FullName
+                    Player2Name = m.Player2.FullName,
+                    m.Player1Id,
+                    m.Player2Id,
                 })
                 .ToListAsync();
         }

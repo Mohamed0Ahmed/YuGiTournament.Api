@@ -1,5 +1,4 @@
-﻿using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using YuGiTournament.Api.Abstractions;
 using YuGiTournament.Api.ApiResponses;
 using YuGiTournament.Api.Models;
@@ -30,31 +29,68 @@ namespace YuGiTournament.Api.Services
 
         public async Task<ApiResponse> DeletePlayerAsync(int playerId)
         {
+            try
+            {
+                await _unitOfWork.BeginTransactionAsync();
 
-            var player = await _unitOfWork.GetRepository<Player>().Find(player => player.PlayerId == playerId).FirstOrDefaultAsync();
-            if (player == null)
-                return new ApiResponse(false, "مفيش هنا لاعب بالاسم ده");
+                var playerToDelete = await _unitOfWork.GetRepository<Player>().Find(p=>p.PlayerId == playerId).FirstOrDefaultAsync();
+                if (playerToDelete == null)
+                    return new ApiResponse(false, "مفيش هنا لاعب بالاسم ده");
 
-            var playerMatches = await _unitOfWork.GetRepository<Match>()
-                .GetAll()
-                .Where(m => m.Player1Id == playerId || m.Player2Id == playerId)
-                .Select(m => m.MatchId)
-                .ToListAsync();
+                var playerMatches = await _unitOfWork.GetRepository<Match>()
+                    .GetAll()
+                    .Include(m => m.Rounds)
+                    .Include(m => m.Player1)
+                    .Include(m => m.Player2)
+                    .Where(m => m.Player1Id == playerId || m.Player2Id == playerId)
+                    .ToListAsync();
 
-            var roundsToDelete = _unitOfWork.GetRepository<MatchRound>()
-                .GetAll()
-                .Where(r => playerMatches.Contains(r.MatchId));
-            _unitOfWork.GetRepository<MatchRound>().DeleteRange(roundsToDelete);
+                foreach (var match in playerMatches)
+                {
+                    var opponent = match.Player1Id == playerId ? match.Player2 : match.Player1;
+                    if (opponent == null)
+                        continue; 
 
-            var matchesToDelete = _unitOfWork.GetRepository<Match>()
-                .GetAll()
-                .Where(m => m.Player1Id == playerId || m.Player2Id == playerId);
-            _unitOfWork.GetRepository<Match>().DeleteRange(matchesToDelete);
+                    foreach (var round in match.Rounds)
+                    {
+                        switch (round.WinnerId)
+                        {
+                            case var winnerId when winnerId == playerId:
+                                opponent.Losses--;
+                                break;
+                            case var winnerId when winnerId == opponent.PlayerId:
+                                opponent.Wins--;
+                                opponent.Points--;
+                                break;
+                            case null when round.IsDraw:
+                                opponent.Draws--;
+                                opponent.Points -= 0.5;
+                                break;
+                        }
+                    }
 
-            _unitOfWork.GetRepository<Player>().Delete(player);
+                    opponent.UpdateStats();
+                }
 
-            await _unitOfWork.SaveChangesAsync();
-            return new ApiResponse(true, $"تم حذف اللاعب {player.FullName} وكل مبارياته والجولات المرتبطة بيه.");
+                var matchRounds = playerMatches.SelectMany(m => m.Rounds).ToList();
+                if (matchRounds.Any())
+                    _unitOfWork.GetRepository<MatchRound>().DeleteRange(matchRounds);
+
+                if (playerMatches.Any())
+                    _unitOfWork.GetRepository<Match>().DeleteRange(playerMatches);
+
+                _unitOfWork.GetRepository<Player>().Delete(playerToDelete);
+
+                await _unitOfWork.SaveChangesAsync();
+                await _unitOfWork.CommitAsync();
+
+                return new ApiResponse(true, $"تم حذف اللاعب {playerToDelete.FullName} وكل مبارياته والجولات المرتبطة بيه، وتم تعديل إحصائيات اللاعبين الآخرين.");
+            }
+            catch (Exception ex)
+            {
+                await _unitOfWork.RollbackAsync();
+                return new ApiResponse(false, $"حصل خطأ أثناء حذف اللاعب: {ex.Message}");
+            }
         }
 
         public async Task<ApiResponse> AddPlayerAsync(string fullName)
