@@ -149,9 +149,10 @@ namespace YuGiTournament.Api.Services
 
 
             var rankedPlayers = players
-                .OrderByDescending(p => p.Points)
-                .ThenBy(p => p.PlayerId)
-                .ToList();
+           .OrderByDescending(p => p.Points)
+           .ThenByDescending(p => p.Wins) 
+           .ThenBy(p => p.PlayerId) 
+           .ToList();
 
 
             int currentRank = 1;
