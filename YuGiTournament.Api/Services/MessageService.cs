@@ -49,7 +49,7 @@ namespace YuGiTournament.Api.Services
         {
             var messages = await _unitOfWork.GetRepository<Message>()
                 .GetAll()
-                .Where(m => m.SenderId != adminId)
+                .Where(m => m.SenderId != adminId && !m.IsDeleted)
                 .Select(m => new
                 {
                     m.Id,
@@ -58,7 +58,8 @@ namespace YuGiTournament.Api.Services
                     m.SenderPhoneNumber,
                     m.Content,
                     m.IsRead,
-                    m.SentAt
+                    m.SentAt,
+                    m.IsDeleted
                 })
                 .ToListAsync();
 
@@ -69,7 +70,7 @@ namespace YuGiTournament.Api.Services
         {
             var messages = await _unitOfWork.GetRepository<Message>()
                 .GetAll()
-                .Where(m => m.SenderId != adminId && m.IsRead)
+                .Where(m => m.SenderId != adminId && m.IsRead && !m.IsDeleted)
                 .Select(m => new
                 {
                     m.Id,
@@ -89,7 +90,7 @@ namespace YuGiTournament.Api.Services
         {
             var messages = await _unitOfWork.GetRepository<Message>()
                 .GetAll()
-                .Where(m => m.SenderId != adminId && !m.IsRead)
+                .Where(m => m.SenderId != adminId && !m.IsRead && !m.IsDeleted)
                 .Select(m => new
                 {
                     m.Id,
@@ -128,6 +129,32 @@ namespace YuGiTournament.Api.Services
                 message.IsRead = false;
                 await _unitOfWork.SaveChangesAsync();
                 return new ApiResponse(true, "Message marked as unread.");
+            }
+        }
+
+        public async Task<ApiResponse> SoftDelete(int messageId, bool marked)
+        {
+
+            var message = _unitOfWork.GetRepository<Message>().GetAll().FirstOrDefault(m => m.Id == messageId);
+            if (message == null)
+                return new ApiResponse(false, "Message not found.");
+            if (marked)
+            {
+                if (message.IsDeleted == true)
+                    return new ApiResponse(false, "This message is already deleted.");
+
+                message.IsDeleted = true;
+                await _unitOfWork.SaveChangesAsync();
+                return new ApiResponse(true, "Message deleted.");
+            }
+            else
+            {
+                if (message.IsDeleted == false)
+                    return new ApiResponse(false, "This message is already not deleted.");
+
+                message.IsDeleted = false;
+                await _unitOfWork.SaveChangesAsync();
+                return new ApiResponse(true, "Message returned.");
             }
         }
 

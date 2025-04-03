@@ -15,6 +15,7 @@ namespace YuGiTournament.Api.Data.Configurations
             builder.Property(m => m.Content).IsRequired();
             builder.Property(m => m.IsRead).IsRequired();
             builder.Property(m => m.SentAt).IsRequired();
+            builder.Property(m => m.IsDeleted).IsRequired();
         }
     }
 }

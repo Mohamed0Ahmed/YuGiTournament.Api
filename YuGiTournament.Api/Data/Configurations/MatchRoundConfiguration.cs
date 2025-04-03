@@ -1,6 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using Microsoft.EntityFrameworkCore;
 using YuGiTournament.Api.Models;
+using System.Text.RegularExpressions;
 
 namespace YuGiTournament.Api.Data.Configurations
 {
@@ -10,7 +11,12 @@ namespace YuGiTournament.Api.Data.Configurations
         {
             builder
                 .Property(r => r.WinnerId)
-                .IsRequired(false);
+            .IsRequired(false);
+
+            builder.Property(m => m.IsDeleted)
+                .IsRequired();
+            builder.Property(m => m.LeagueNumber)
+                 .IsRequired();
         }
     }
 }

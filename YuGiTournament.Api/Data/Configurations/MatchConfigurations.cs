@@ -33,6 +33,13 @@ namespace YuGiTournament.Api.Data.Configurations
                  .WithOne(r => r.Match)
                  .HasForeignKey(r => r.MatchId)
                  .OnDelete(DeleteBehavior.Cascade);
+
+
+            match.Property(m => m.IsDeleted)
+                 .IsRequired();
+            match.Property(m => m.LeagueNumber)
+                 .IsRequired();
+
         }
     }
 }

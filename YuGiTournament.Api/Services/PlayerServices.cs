@@ -33,7 +33,7 @@ namespace YuGiTournament.Api.Services
             {
                 await _unitOfWork.BeginTransactionAsync();
 
-                var playerToDelete = await _unitOfWork.GetRepository<Player>().Find(p=>p.PlayerId == playerId).FirstOrDefaultAsync();
+                var playerToDelete = await _unitOfWork.GetRepository<Player>().Find(p => p.PlayerId == playerId).FirstOrDefaultAsync();
                 if (playerToDelete == null)
                     return new ApiResponse(false, "مفيش هنا لاعب بالاسم ده");
 
@@ -49,7 +49,7 @@ namespace YuGiTournament.Api.Services
                 {
                     var opponent = match.Player1Id == playerId ? match.Player2 : match.Player1;
                     if (opponent == null)
-                        continue; 
+                        continue;
 
                     foreach (var round in match.Rounds)
                     {
@@ -111,6 +111,16 @@ namespace YuGiTournament.Api.Services
                 .ToListAsync();
 
             var matches = new List<Match>();
+            var league = await _unitOfWork.GetRepository<LeagueId>()
+                .Find(x => x.IsFinished == false)
+                .OrderByDescending(x => x.CreatedOn)
+                .FirstOrDefaultAsync();
+
+
+
+            if (league == null)
+                return new ApiResponse(false, $"مش موجودة هنا "); ;
+            player.LeagueNumber = league.Id;
 
             foreach (var opponent in otherPlayers)
             {
@@ -120,7 +130,8 @@ namespace YuGiTournament.Api.Services
                     Player2Id = opponent.PlayerId,
                     Score1 = 0,
                     Score2 = 0,
-                    IsCompleted = false
+                    IsCompleted = false,
+                    LeagueNumber = league.Id
                 });
             }
 
@@ -136,75 +147,90 @@ namespace YuGiTournament.Api.Services
 
         public async Task<IEnumerable<Player>> GetPlayersRankingAsync()
         {
-
             var players = await _unitOfWork.GetRepository<Player>()
                 .GetAll()
                 .ToListAsync();
-
 
             var completedMatches = await _unitOfWork.GetRepository<Match>()
                 .GetAll()
                 .Where(m => m.IsCompleted)
                 .ToListAsync();
 
-
             var rankedPlayers = players
-           .OrderByDescending(p => p.Points)
-           .ThenByDescending(p => p.Wins) 
-           .ThenBy(p => p.PlayerId) 
-           .ToList();
-
+                .OrderByDescending(p => p.Points)
+                .ToList();
 
             int currentRank = 1;
             for (int i = 0; i < rankedPlayers.Count; i++)
             {
-                if (i > 0 && rankedPlayers[i].Points == rankedPlayers[i - 1].Points)
-                {
-                    var headToHead = completedMatches
-                        .FirstOrDefault(m =>
-                            (m.Player1Id == rankedPlayers[i].PlayerId && m.Player2Id == rankedPlayers[i - 1].PlayerId) ||
-                            (m.Player2Id == rankedPlayers[i].PlayerId && m.Player1Id == rankedPlayers[i - 1].PlayerId));
-
-                    if (headToHead != null)
-                    {
-                        if (headToHead.Score1 == headToHead.Score2)
-                        {
-                            if (rankedPlayers[i].Wins == rankedPlayers[i - 1].Wins)
-                            {
-                                rankedPlayers[i].Rank = rankedPlayers[i - 1].Rank;
-                            }
-                            else
-                            {
-                                rankedPlayers[i].Rank = currentRank;
-                            }
-                        }
-                        else
-                        {
-                            rankedPlayers[i].Rank = currentRank;
-                        }
-                    }
-                    else
-                    {
-                        if (rankedPlayers[i].Wins == rankedPlayers[i - 1].Wins)
-                        {
-                            rankedPlayers[i].Rank = rankedPlayers[i - 1].Rank;
-                        }
-                        else
-                        {
-                            rankedPlayers[i].Rank = currentRank;
-                        }
-                    }
-                }
-                else
+                if (i == 0 || rankedPlayers[i].Points != rankedPlayers[i - 1].Points)
                 {
                     rankedPlayers[i].Rank = currentRank;
                 }
+                else
+                {
+                    var player1 = rankedPlayers[i - 1];
+                    var player2 = rankedPlayers[i];
+
+                    var headToHeadMatches = completedMatches
+                        .Where(m =>
+                            (m.Player1Id == player1.PlayerId && m.Player2Id == player2.PlayerId) ||
+                            (m.Player2Id == player1.PlayerId && m.Player1Id == player2.PlayerId))
+                        .ToList();
+
+                    double player1HeadToHeadPoints = 0;
+                    double player2HeadToHeadPoints = 0;
+
+                    foreach (var match in headToHeadMatches)
+                    {
+                        if (match.Score1 == match.Score2)
+                        {
+                            player1HeadToHeadPoints += 0.5;
+                            player2HeadToHeadPoints += 0.5;
+                        }
+                        else if ((match.Player1Id == player1.PlayerId && match.Score1 > match.Score2) ||
+                                 (match.Player2Id == player1.PlayerId && match.Score2 > match.Score1))
+                        {
+                            player1HeadToHeadPoints += 1;
+                        }
+                        else
+                        {
+                            player2HeadToHeadPoints += 1;
+                        }
+                    }
+
+                    if (player1HeadToHeadPoints > player2HeadToHeadPoints)
+                    {
+                        rankedPlayers[i].Rank = currentRank;
+                    }
+                    else if (player2HeadToHeadPoints > player1HeadToHeadPoints)
+                    {
+                        rankedPlayers[i - 1].Rank = currentRank;
+                        rankedPlayers[i].Rank = currentRank - 1;
+                    }
+                    else
+                    {
+                        if (player1.WinRate > player2.WinRate)
+                        {
+                            rankedPlayers[i].Rank = currentRank;
+                        }
+                        else if (player2.WinRate > player1.WinRate)
+                        {
+                            rankedPlayers[i - 1].Rank = currentRank;
+                            rankedPlayers[i].Rank = currentRank - 1;
+                        }
+                        else
+                        {
+                            rankedPlayers[i].Rank = rankedPlayers[i - 1].Rank;
+                        }
+                    }
+                }
+
                 currentRank++;
             }
+            rankedPlayers = [.. rankedPlayers.OrderBy(p => p.Rank)];
 
             return rankedPlayers;
         }
-
-      
     }
 }

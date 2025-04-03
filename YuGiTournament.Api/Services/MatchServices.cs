@@ -132,6 +132,14 @@ namespace YuGiTournament.Api.Services
                 var player1 = await _unitOfWork.GetRepository<Player>().Find(player => player.PlayerId == match.Player1Id).FirstOrDefaultAsync();
                 var player2 = await _unitOfWork.GetRepository<Player>().Find(player => player.PlayerId == match.Player2Id).FirstOrDefaultAsync();
 
+                var league = await _unitOfWork.GetRepository<LeagueId>()
+                .Find(x => x.IsFinished == false)
+                .OrderByDescending(x => x.CreatedOn)
+                .FirstOrDefaultAsync();
+
+                if (league == null)
+                    return new ApiResponse(false, $"مش موجودة هنا "); ;
+
                 if (player1 == null || player2 == null)
                     return new ApiResponse(false, "All Players Must Be There");
 
@@ -139,7 +147,11 @@ namespace YuGiTournament.Api.Services
                 if (matchCount >= 5)
                     return new ApiResponse(false, "خلاص بقي هم لعبوا ال 5 ماتشات والله");
 
-                var newRound = new MatchRound { MatchId = matchId };
+                var newRound = new MatchRound
+                {
+                    MatchId = matchId,
+                    LeagueNumber = league!.Id
+                };
                 string responseMessage;
 
                 if (resultDto.WinnerId == null)

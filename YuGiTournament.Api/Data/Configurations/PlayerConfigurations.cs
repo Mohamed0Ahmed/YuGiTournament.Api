@@ -1,5 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
+using System.Text.RegularExpressions;
 using YuGiTournament.Api.Models;
 
 namespace YuGiTournament.Api.Data.Configurations
@@ -39,7 +40,12 @@ namespace YuGiTournament.Api.Data.Configurations
                   .HasDefaultValue(0);
 
             player.Property(p => p.Points)
-                  .HasDefaultValue(0);
+            .HasDefaultValue(0);
+
+            player.Property(m => m.IsDeleted)
+                .IsRequired();
+            player.Property(m => m.LeagueNumber)
+                 .IsRequired();
         }
     }
 }

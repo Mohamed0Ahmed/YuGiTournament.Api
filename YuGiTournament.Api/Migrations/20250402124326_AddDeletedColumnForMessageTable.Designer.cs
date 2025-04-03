@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using YuGiTournament.Api.Data;
 
@@ -11,9 +12,11 @@ using YuGiTournament.Api.Data;
 namespace YuGiTournament.Api.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250402124326_AddDeletedColumnForMessageTable")]
+    partial class AddDeletedColumnForMessageTable
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -231,36 +234,6 @@ namespace YuGiTournament.Api.Migrations
                     b.ToTable("AspNetUsers", (string)null);
                 });
 
-            modelBuilder.Entity("YuGiTournament.Api.Models.LeagueId", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<DateTime>("CreatedOn")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("Description")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<bool>("IsFinished")
-                        .HasColumnType("bit");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<int>("TypeOfLeague")
-                        .HasColumnType("int");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("LeagueId");
-                });
-
             modelBuilder.Entity("YuGiTournament.Api.Models.Match", b =>
                 {
                     b.Property<int>("MatchId")
@@ -273,12 +246,6 @@ namespace YuGiTournament.Api.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("bit")
                         .HasDefaultValue(false);
-
-                    b.Property<bool>("IsDeleted")
-                        .HasColumnType("bit");
-
-                    b.Property<int>("LeagueNumber")
-                        .HasColumnType("int");
 
                     b.Property<int>("Player1Id")
                         .HasColumnType("int");
@@ -313,14 +280,8 @@ namespace YuGiTournament.Api.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("MatchRoundId"));
 
-                    b.Property<bool>("IsDeleted")
-                        .HasColumnType("bit");
-
                     b.Property<bool>("IsDraw")
                         .HasColumnType("bit");
-
-                    b.Property<int>("LeagueNumber")
-                        .HasColumnType("int");
 
                     b.Property<int>("MatchId")
                         .HasColumnType("int");
@@ -373,29 +334,6 @@ namespace YuGiTournament.Api.Migrations
                     b.ToTable("Messages");
                 });
 
-            modelBuilder.Entity("YuGiTournament.Api.Models.Note", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("Content")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<bool>("IsDeleted")
-                        .HasColumnType("bit");
-
-                    b.Property<bool>("IsHidden")
-                        .HasColumnType("bit");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("Notes");
-                });
-
             modelBuilder.Entity("YuGiTournament.Api.Models.Player", b =>
                 {
                     b.Property<int>("PlayerId")
@@ -413,12 +351,6 @@ namespace YuGiTournament.Api.Migrations
                         .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
-
-                    b.Property<bool>("IsDeleted")
-                        .HasColumnType("bit");
-
-                    b.Property<int>("LeagueNumber")
-                        .HasColumnType("int");
 
                     b.Property<int>("Losses")
                         .ValueGeneratedOnAdd()

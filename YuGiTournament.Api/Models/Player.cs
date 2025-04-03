@@ -1,6 +1,6 @@
 ﻿namespace YuGiTournament.Api.Models
 {
-    public class Player
+    public class Player : DeletedEntity
     {
         public int PlayerId { get; set; }
         public string FullName { get; set; } = string.Empty;

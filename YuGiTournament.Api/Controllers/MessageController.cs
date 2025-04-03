@@ -91,6 +91,21 @@ namespace YuGiTournament.Api.Controllers
 
             return Ok(response);
         }
+
+        [Authorize(Roles = "Admin")]
+        [HttpPost("delete/{messageId}")]
+        public async Task<IActionResult> DeleteMessage(int messageId, [FromBody] MarkMessageDto request)
+        {
+            var response = await _messageService.SoftDelete(messageId, request.Marked);
+            if (!response.Success)
+            {
+                return NotFound(response);
+            }
+
+            return Ok(response);
+        }
+
+
     }
 
 
