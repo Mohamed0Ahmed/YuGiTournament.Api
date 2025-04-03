@@ -31,9 +31,13 @@ namespace YuGiTournament.Api.Repositories
             return _dbSet.Where(predicate);
         }
 
-        public async Task AddAsync(T entity)
+        public async Task<bool> AddAsync(T entity)
         {
-            await _dbSet.AddAsync(entity);
+           var result =  await _dbSet.AddAsync(entity);
+            if (result == null)
+                return false;
+
+            return true;
         }
 
         public async Task AddRangeAsync(IEnumerable<T> entities)

@@ -19,7 +19,13 @@ namespace YuGiTournament.Api.Services
 
         public async Task<IEnumerable<Player>> GetAllPlayersAsync()
         {
-            return await _unitOfWork.GetRepository<Player>().GetAll().ToListAsync();
+            var league = await _unitOfWork.GetRepository<LeagueId>()
+                 .Find(x => x.IsFinished == false)
+                 .FirstOrDefaultAsync();
+
+            return league == null
+                ? []
+                : (IEnumerable<Player>)await _unitOfWork.GetRepository<Player>().GetAll().Where(x=>x.LeagueNumber == league.Id).ToListAsync();
         }
 
         public async Task<Player?> GetPlayerByIdAsync(int playerId)
@@ -97,7 +103,14 @@ namespace YuGiTournament.Api.Services
         {
             var player = new Player { FullName = fullName };
 
-            var ExistPlayer = await _unitOfWork.GetRepository<Player>().Find(x => x.FullName == fullName).FirstOrDefaultAsync();
+            var league = await _unitOfWork.GetRepository<LeagueId>()
+                .Find(x => x.IsFinished == false)
+                .FirstOrDefaultAsync();
+
+            if (league == null)
+                return new ApiResponse(false, $"لا يوجد دوري حاليا  ");
+
+            var ExistPlayer = await _unitOfWork.GetRepository<Player>().Find(x => x.FullName == fullName).Where(p=>p.LeagueNumber == league.Id).FirstOrDefaultAsync();
 
             if (ExistPlayer != null)
                 return new ApiResponse(false, $"تم اضافة اللاعب {player.FullName} من قبل !!!");
@@ -111,15 +124,10 @@ namespace YuGiTournament.Api.Services
                 .ToListAsync();
 
             var matches = new List<Match>();
-            var league = await _unitOfWork.GetRepository<LeagueId>()
-                .Find(x => x.IsFinished == false)
-                .OrderByDescending(x => x.CreatedOn)
-                .FirstOrDefaultAsync();
+            
 
 
 
-            if (league == null)
-                return new ApiResponse(false, $"مش موجودة هنا "); ;
             player.LeagueNumber = league.Id;
 
             foreach (var opponent in otherPlayers)
@@ -144,11 +152,17 @@ namespace YuGiTournament.Api.Services
             return new ApiResponse(true, $"تم اضافة اللاعب {player.FullName} وكل مبارياته والجولات المرتبطة بيه.");
         }
 
-
         public async Task<IEnumerable<Player>> GetPlayersRankingAsync()
         {
+            var league = await _unitOfWork.GetRepository<LeagueId>()
+                .Find(x => x.IsFinished == false)
+                .FirstOrDefaultAsync();
+
+            if(league == null)
+                return [];
+
             var players = await _unitOfWork.GetRepository<Player>()
-                .GetAll()
+                .GetAll().Where(x=>x.LeagueNumber==league.Id)
                 .ToListAsync();
 
             var completedMatches = await _unitOfWork.GetRepository<Match>()

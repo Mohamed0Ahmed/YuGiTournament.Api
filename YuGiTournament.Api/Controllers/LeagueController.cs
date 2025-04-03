@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using YuGiTournament.Api.DTOs;
 using YuGiTournament.Api.Services.Abstractions;
 
 namespace YuGiTournament.Api.Controllers
@@ -16,11 +17,28 @@ namespace YuGiTournament.Api.Controllers
         }
 
         [Authorize(Roles = "Admin")]
-        [HttpPost("reset")]
-        public async Task<IActionResult> ResetLeague()
+        [HttpPost("reset/{leagueId}")]
+        public async Task<IActionResult> ResetLeague(int leagueId)
         {
-            await _leagueResetService.ResetLeagueAsync();
-            return Ok("League has been reset successfully.");
+            var result = await _leagueResetService.ResetLeagueAsync(leagueId);
+            return Ok(result);
         }
+
+        [Authorize(Roles = "Admin")]
+        [HttpPost("start")]
+        public async Task<IActionResult> StartLeague([FromBody]StartLeagueDto newLeague)
+        {
+            var result = await _leagueResetService.StartLeagueAsync(newLeague);
+            return Ok(result);
+        }
+
+        [Authorize(Roles = "Admin")]
+        [HttpGet("getCurrentLeague")]
+        public async Task<IActionResult> GetCurrentLeague()
+        {
+            var result = await _leagueResetService.GetCurrentLeague();
+            return Ok(result);
+        }
+
     }
 }

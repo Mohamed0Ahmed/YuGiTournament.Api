@@ -18,8 +18,16 @@ namespace YuGiTournament.Api.Services
 
         public async Task<IEnumerable<object>> GetAllMatchesAsync()
         {
-            return await _unitOfWork.GetRepository<Match>()
-                .GetAll()
+
+            var league = await _unitOfWork.GetRepository<LeagueId>()
+              .Find(x => x.IsFinished == false)
+              .FirstOrDefaultAsync();
+
+            return league == null ? []
+
+
+                : (IEnumerable<object>)await _unitOfWork.GetRepository<Match>()
+                .GetAll().Where(m => m.LeagueNumber == league.Id)
                 .Select(m => new
                 {
                     m.MatchId,
@@ -50,7 +58,6 @@ namespace YuGiTournament.Api.Services
                 })
                 .FirstOrDefaultAsync();
         }
-
 
         public async Task<ApiResponse> ResetMatchByIdAsync(int matchId)
         {
@@ -134,11 +141,10 @@ namespace YuGiTournament.Api.Services
 
                 var league = await _unitOfWork.GetRepository<LeagueId>()
                 .Find(x => x.IsFinished == false)
-                .OrderByDescending(x => x.CreatedOn)
                 .FirstOrDefaultAsync();
 
                 if (league == null)
-                    return new ApiResponse(false, $"مش موجودة هنا "); ;
+                    return new ApiResponse(false, $"الدوري لسه مبدأش "); ;
 
                 if (player1 == null || player2 == null)
                     return new ApiResponse(false, "All Players Must Be There");

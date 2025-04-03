@@ -7,7 +7,7 @@ namespace YuGiTournament.Api.Abstractions
         IQueryable<T> GetAll();
         Task<T?> GetByIdAsync(string id);
         IQueryable<T> Find(Expression<Func<T, bool>> predicate);
-        Task AddAsync(T entity);
+        Task<bool> AddAsync(T entity);
         Task AddRangeAsync(IEnumerable<T> entities); 
         void Update(T entity);
         void UpdateRange(IEnumerable<T> entities); 
