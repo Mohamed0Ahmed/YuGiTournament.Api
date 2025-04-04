@@ -25,9 +25,10 @@ namespace YuGiTournament.Api.Services
             if (league == null)
                 return new LeagueResponse { Response = new ApiResponse(false, "لا يوجد دوري حاليا"), League = null };
 
-            var response = new ApiResponse(true, "لا يوجد دوري حاليا");
+            var response = new ApiResponse(true, "بيانات الدوري الحالي");
             return new LeagueResponse { Response = response, League = league };
         }
+
 
         public async Task<ApiResponse> ResetLeagueAsync(int leagueId)
         {
@@ -36,7 +37,6 @@ namespace YuGiTournament.Api.Services
 
             try
             {
-
                 var league = _unitOfWork.GetRepository<LeagueId>().Find(x => x.Id == leagueId).FirstOrDefault();
                 if (league == null)
                     return new ApiResponse(false, "الدوري ده مش موجود");
@@ -44,12 +44,12 @@ namespace YuGiTournament.Api.Services
                 if (league.IsFinished == true)
                     return new ApiResponse(false, "هذا الدوري منتهي بالفعل");
                 else
-                    league.IsFinished = false;
+                    league.IsFinished = true;
 
+                _unitOfWork.GetRepository<LeagueId>().Update(league); 
 
                 await _unitOfWork.GetDbContext().Database.ExecuteSqlRawAsync("DELETE FROM Messages");
                 await _unitOfWork.GetDbContext().Database.ExecuteSqlRawAsync("DBCC CHECKIDENT ('Messages', RESEED, 0)");
-
 
                 await dbContext.Database.ExecuteSqlRawAsync(
                     "UPDATE Matches SET IsDeleted = 1 WHERE LeagueNumber = {0}", leagueId);
@@ -58,7 +58,7 @@ namespace YuGiTournament.Api.Services
                 await dbContext.Database.ExecuteSqlRawAsync(
                     "UPDATE Players SET IsDeleted = 1 WHERE LeagueNumber = {0}", leagueId);
 
-
+                await _unitOfWork.SaveChangesAsync(); 
                 await transaction.CommitAsync();
             }
             catch (Exception)
@@ -69,6 +69,7 @@ namespace YuGiTournament.Api.Services
 
             return new ApiResponse(true, "تم انهاء الدوري");
         }
+
 
         public async Task<ApiResponse> StartLeagueAsync(StartLeagueDto newLeague)
         {
