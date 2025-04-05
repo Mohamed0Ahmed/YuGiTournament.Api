@@ -25,8 +25,16 @@ namespace YuGiTournament.Api.Controllers
         }
 
         [Authorize(Roles = "Admin")]
+        [HttpDelete("delete/{leagueId}")]
+        public async Task<IActionResult> DeleteLeague(int leagueId)
+        {
+            var result = await _leagueResetService.DeleteLeague(leagueId);
+            return Ok(result);
+        }
+
+        [Authorize(Roles = "Admin")]
         [HttpPost("start")]
-        public async Task<IActionResult> StartLeague([FromBody]StartLeagueDto newLeague)
+        public async Task<IActionResult> StartLeague([FromBody] StartLeagueDto newLeague)
         {
             var result = await _leagueResetService.StartLeagueAsync(newLeague);
             return Ok(result);

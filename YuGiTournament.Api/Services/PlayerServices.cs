@@ -247,5 +247,50 @@ namespace YuGiTournament.Api.Services
 
             return rankedPlayers;
         }
+
+        public async Task<IEnumerable<object>> GetAllLeaguesWithMatchesAsync()
+        {
+            var leagues = await _unitOfWork.GetRepository<LeagueId>()
+                .GetAll()
+                .ToListAsync();
+
+            if (leagues == null || leagues.Count == 0)
+            {
+                return [];
+            }
+
+            var result = new List<object>();
+            foreach (var league in leagues)
+            {
+                var matches = await _unitOfWork.GetRepository<Match>()
+                    .GetAll()
+                    .Where(m => m.LeagueNumber == league.Id)
+                    .Select(m => new
+                    {
+                        m.MatchId,
+                        m.Score1,
+                        m.Score2,
+                        m.IsCompleted,
+                        Player1Name = m.Player1.FullName,
+                        Player2Name = m.Player2.FullName,
+                        m.Player1Id,
+                        m.Player2Id
+                    })
+                    .ToListAsync();
+
+                result.Add(new
+                {
+                    LeagueId = league.Id,
+                    LeagueName = league.Name,
+                    LeagueDescription = league.Description,
+                    LeagueType = league.TypeOfLeague,
+                    league.IsFinished,
+                    league.CreatedOn,
+                    Matches = matches
+                });
+            }
+
+            return result;
+        }
     }
 }

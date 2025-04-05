@@ -4,8 +4,6 @@ using YuGiTournament.Api.Abstractions;
 using YuGiTournament.Api.ApiResponses;
 using YuGiTournament.Api.Models;
 using YuGiTournament.Api.DTOs;
-using System.Numerics;
-using Azure;
 
 namespace YuGiTournament.Api.Services
 {
@@ -46,7 +44,7 @@ namespace YuGiTournament.Api.Services
                 else
                     league.IsFinished = true;
 
-                _unitOfWork.GetRepository<LeagueId>().Update(league); 
+                _unitOfWork.GetRepository<LeagueId>().Update(league);
 
                 await _unitOfWork.GetDbContext().Database.ExecuteSqlRawAsync("DELETE FROM Messages");
                 await _unitOfWork.GetDbContext().Database.ExecuteSqlRawAsync("DBCC CHECKIDENT ('Messages', RESEED, 0)");
@@ -58,7 +56,7 @@ namespace YuGiTournament.Api.Services
                 await dbContext.Database.ExecuteSqlRawAsync(
                     "UPDATE Players SET IsDeleted = 1 WHERE LeagueNumber = {0}", leagueId);
 
-                await _unitOfWork.SaveChangesAsync(); 
+                await _unitOfWork.SaveChangesAsync();
                 await transaction.CommitAsync();
             }
             catch (Exception)
@@ -70,6 +68,31 @@ namespace YuGiTournament.Api.Services
             return new ApiResponse(true, "تم انهاء الدوري");
         }
 
+        public async Task<ApiResponse> DeleteLeague(int leagueId)
+        {
+            var dbContext = _unitOfWork.GetDbContext();
+            using var transaction = await dbContext.Database.BeginTransactionAsync();
+
+            try
+            {
+                var league = _unitOfWork.GetRepository<LeagueId>().Find(x => x.Id == leagueId).FirstOrDefault();
+                if (league == null)
+                    return new ApiResponse(false, "الدوري ده مش موجود");
+
+                league.IsDeleted = true;
+
+                 _unitOfWork.GetRepository<LeagueId>().Update(league);
+                await _unitOfWork.SaveChangesAsync();
+                await transaction.CommitAsync();
+            }
+            catch (Exception)
+            {
+                await transaction.RollbackAsync();
+                return new ApiResponse(false, "حدث خطأ اثناء انهاء الدوري");
+            }
+
+            return new ApiResponse(true, "تم حذف الدوري");
+        }
 
         public async Task<ApiResponse> StartLeagueAsync(StartLeagueDto newLeague)
         {

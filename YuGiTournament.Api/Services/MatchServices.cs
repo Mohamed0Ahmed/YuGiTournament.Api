@@ -24,8 +24,6 @@ namespace YuGiTournament.Api.Services
               .FirstOrDefaultAsync();
 
             return league == null ? []
-
-
                 : (IEnumerable<object>)await _unitOfWork.GetRepository<Match>()
                 .GetAll().Where(m => m.LeagueNumber == league.Id)
                 .Select(m => new

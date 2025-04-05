@@ -7,6 +7,7 @@ namespace YuGiTournament.Api.Services.Abstractions
     {
         Task<LeagueResponse> GetCurrentLeague();
         Task<ApiResponse> ResetLeagueAsync(int leagueId);
+        Task<ApiResponse> DeleteLeague(int leagueId);
         Task<ApiResponse> StartLeagueAsync(StartLeagueDto newLeague);
     }
 }

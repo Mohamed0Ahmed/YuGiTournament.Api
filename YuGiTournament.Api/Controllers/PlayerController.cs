@@ -38,6 +38,14 @@ namespace YuGiTournament.Api.Controllers
             return Ok(ranking);
         }
 
+        [HttpGet("ranking/all")]
+        public async Task<IActionResult> GetRankingAll()
+        {
+            var ranking = await _playerService.GetAllLeaguesWithMatchesAsync();
+            return Ok(ranking);
+        }
+
+
         [Authorize(Roles = "Admin")]
         [HttpDelete("{playerId}")]
         public async Task<IActionResult> DeletePlayer(int playerId)

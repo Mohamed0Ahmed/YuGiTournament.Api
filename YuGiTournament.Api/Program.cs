@@ -113,6 +113,7 @@ namespace YuGiTournament.Api
 
             #region Configure Middleware
 
+            app.UseCors("AllowFrontend");
             app.UseHttpsRedirection();
             app.UseStaticFiles();
 
@@ -125,7 +126,6 @@ namespace YuGiTournament.Api
 
             app.UseAuthentication();
             app.UseAuthorization();
-            app.UseCors("AllowFrontend");
             app.MapControllers();
 
             #endregion
