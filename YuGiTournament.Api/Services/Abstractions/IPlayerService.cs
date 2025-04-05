@@ -10,6 +10,6 @@ namespace YuGiTournament.Api.Services.Abstractions
         Task<ApiResponse> AddPlayerAsync(string NamePlayer);
         Task<ApiResponse> DeletePlayerAsync(int playerId);
         Task<IEnumerable<Player>> GetPlayersRankingAsync();
-        Task<IEnumerable<object>> GetAllLeaguesWithMatchesAsync();
+        Task<IEnumerable<object>> GetAllLeaguesWithRankAsync();
     }
 }

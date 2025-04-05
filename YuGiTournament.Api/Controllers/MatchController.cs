@@ -25,6 +25,14 @@ namespace YuGiTournament.Api.Controllers
             return Ok(matches);
         }
 
+        [HttpGet("matches/all")]
+        public async Task<IActionResult> GetAllLeaguesMatches()
+        {
+            var ranking = await _matchService.GetAllLeaguesWithMatchesAsync();
+            return Ok(ranking);
+        }
+
+
 
         [HttpGet("{id}")]
         public async Task<ActionResult<Match>> GetMatch(int id)

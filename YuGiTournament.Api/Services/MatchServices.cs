@@ -40,6 +40,51 @@ namespace YuGiTournament.Api.Services
                 .ToListAsync();
         }
 
+        public async Task<IEnumerable<object>> GetAllLeaguesWithMatchesAsync()
+        {
+            var leagues = await _unitOfWork.GetRepository<LeagueId>()
+                .GetAll()
+                .ToListAsync();
+
+            if (leagues == null || leagues.Count == 0)
+            {
+                return [];
+            }
+
+            var result = new List<object>();
+            foreach (var league in leagues)
+            {
+                var matches = await _unitOfWork.GetRepository<Match>()
+                    .GetAll()
+                    .Where(m => m.LeagueNumber == league.Id)
+                    .Select(m => new
+                    {
+                        m.MatchId,
+                        m.Score1,
+                        m.Score2,
+                        m.IsCompleted,
+                        Player1Name = m.Player1.FullName,
+                        Player2Name = m.Player2.FullName,
+                        m.Player1Id,
+                        m.Player2Id,
+                    })
+                    .ToListAsync();
+
+                result.Add(new
+                {
+                    LeagueId = league.Id,
+                    LeagueName = league.Name,
+                    LeagueDescription = league.Description,
+                    LeagueType = league.TypeOfLeague,
+                    league.IsFinished,
+                    league.CreatedOn,
+                    Matches = matches,
+                });
+            }
+
+            return result;
+        }
+
         public async Task<object?> GetMatchByIdAsync(int matchId)
         {
             return await _unitOfWork.GetRepository<Match>()
@@ -61,6 +106,7 @@ namespace YuGiTournament.Api.Services
         {
             try
             {
+                var dbContext = _unitOfWork.GetDbContext();
                 await _unitOfWork.BeginTransactionAsync();
 
                 var match = await _unitOfWork.GetRepository<Match>()
@@ -114,6 +160,8 @@ namespace YuGiTournament.Api.Services
                 player2.UpdateStats();
 
                 await _unitOfWork.SaveChangesAsync();
+                await dbContext.Database.ExecuteSqlRawAsync("EXEC UpdatePlayersRanking");
+
                 await _unitOfWork.CommitAsync();
 
                 return new ApiResponse(true, "تم إعادة تعيين الماتش من البداية.");
@@ -127,6 +175,7 @@ namespace YuGiTournament.Api.Services
 
         public async Task<ApiResponse> UpdateMatchResultAsync(int matchId, MatchResultDto resultDto)
         {
+            var dbContext = _unitOfWork.GetDbContext();
             using var transaction = await _unitOfWork.GetDbContext().Database.BeginTransactionAsync();
             try
             {
@@ -198,6 +247,7 @@ namespace YuGiTournament.Api.Services
                 _unitOfWork.GetRepository<Match>().Update(match);
 
                 await _unitOfWork.SaveChangesAsync();
+                await dbContext.Database.ExecuteSqlRawAsync("EXEC UpdatePlayersRanking");
                 await transaction.CommitAsync();
 
                 return new ApiResponse(true, responseMessage);

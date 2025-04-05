@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using YuGiTournament.Api.DTOs;
+using YuGiTournament.Api.Services;
 using YuGiTournament.Api.Services.Abstractions;
 
 namespace YuGiTournament.Api.Controllers
@@ -38,13 +39,12 @@ namespace YuGiTournament.Api.Controllers
             return Ok(ranking);
         }
 
-        [HttpGet("ranking/all")]
-        public async Task<IActionResult> GetRankingAll()
+        [HttpGet("players/all")]
+        public async Task<IActionResult> GetAllLeaguesMatches()
         {
-            var ranking = await _playerService.GetAllLeaguesWithMatchesAsync();
+            var ranking = await _playerService.GetAllLeaguesWithRankAsync();
             return Ok(ranking);
         }
-
 
         [Authorize(Roles = "Admin")]
         [HttpDelete("{playerId}")]

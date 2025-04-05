@@ -163,92 +163,15 @@ namespace YuGiTournament.Api.Services
                 return [];
 
             var players = await _unitOfWork.GetRepository<Player>()
-                .GetAll().Where(x => x.LeagueNumber == league.Id)
-                .ToListAsync();
-
-            var completedMatches = await _unitOfWork.GetRepository<Match>()
                 .GetAll()
-                .Where(m => m.IsCompleted)
+                .Where(x => x.LeagueNumber == league.Id)
+                .OrderBy(x => x.Rank) 
                 .ToListAsync();
 
-            var rankedPlayers = players
-                .OrderByDescending(p => p.Points)
-                .ToList();
-
-            int currentRank = 1;
-            for (int i = 0; i < rankedPlayers.Count; i++)
-            {
-                if (i == 0 || rankedPlayers[i].Points != rankedPlayers[i - 1].Points)
-                {
-                    rankedPlayers[i].Rank = currentRank;
-                }
-                else
-                {
-                    var player1 = rankedPlayers[i - 1];
-                    var player2 = rankedPlayers[i];
-
-                    var headToHeadMatches = completedMatches
-                        .Where(m =>
-                            (m.Player1Id == player1.PlayerId && m.Player2Id == player2.PlayerId) ||
-                            (m.Player2Id == player1.PlayerId && m.Player1Id == player2.PlayerId))
-                        .ToList();
-
-                    double player1HeadToHeadPoints = 0;
-                    double player2HeadToHeadPoints = 0;
-
-                    foreach (var match in headToHeadMatches)
-                    {
-                        if (match.Score1 == match.Score2)
-                        {
-                            player1HeadToHeadPoints += 0.5;
-                            player2HeadToHeadPoints += 0.5;
-                        }
-                        else if ((match.Player1Id == player1.PlayerId && match.Score1 > match.Score2) ||
-                                 (match.Player2Id == player1.PlayerId && match.Score2 > match.Score1))
-                        {
-                            player1HeadToHeadPoints += 1;
-                        }
-                        else
-                        {
-                            player2HeadToHeadPoints += 1;
-                        }
-                    }
-
-                    if (player1HeadToHeadPoints > player2HeadToHeadPoints)
-                    {
-                        rankedPlayers[i].Rank = currentRank;
-                    }
-                    else if (player2HeadToHeadPoints > player1HeadToHeadPoints)
-                    {
-                        rankedPlayers[i - 1].Rank = currentRank;
-                        rankedPlayers[i].Rank = currentRank - 1;
-                    }
-                    else
-                    {
-                        if (player1.WinRate > player2.WinRate)
-                        {
-                            rankedPlayers[i].Rank = currentRank;
-                        }
-                        else if (player2.WinRate > player1.WinRate)
-                        {
-                            rankedPlayers[i - 1].Rank = currentRank;
-                            rankedPlayers[i].Rank = currentRank - 1;
-                        }
-                        else
-                        {
-                            rankedPlayers[i].Rank = rankedPlayers[i - 1].Rank;
-                        }
-                    }
-                }
-
-                currentRank++;
-            }
-            rankedPlayers = [.. rankedPlayers.OrderBy(p => p.Rank)];
-
-            return rankedPlayers;
+            return players;
         }
 
-        public async Task<IEnumerable<object>> GetAllLeaguesWithMatchesAsync()
+        public async Task<IEnumerable<object>> GetAllLeaguesWithRankAsync()
         {
             var leagues = await _unitOfWork.GetRepository<LeagueId>()
                 .GetAll()
@@ -262,19 +185,21 @@ namespace YuGiTournament.Api.Services
             var result = new List<object>();
             foreach (var league in leagues)
             {
-                var matches = await _unitOfWork.GetRepository<Match>()
+                var players = await _unitOfWork.GetRepository<Player>()
                     .GetAll()
-                    .Where(m => m.LeagueNumber == league.Id)
-                    .Select(m => new
+                    .Where(p => p.LeagueNumber == league.Id)
+                    .OrderBy(p => p.Rank) 
+                    .Select(p => new
                     {
-                        m.MatchId,
-                        m.Score1,
-                        m.Score2,
-                        m.IsCompleted,
-                        Player1Name = m.Player1.FullName,
-                        Player2Name = m.Player2.FullName,
-                        m.Player1Id,
-                        m.Player2Id
+                        p.PlayerId,
+                        p.FullName,
+                        p.Wins,
+                        p.Losses,
+                        p.Draws,
+                        p.Points,
+                        p.MatchesPlayed,
+                        p.Rank,
+                        p.WinRate
                     })
                     .ToListAsync();
 
@@ -286,7 +211,7 @@ namespace YuGiTournament.Api.Services
                     LeagueType = league.TypeOfLeague,
                     league.IsFinished,
                     league.CreatedOn,
-                    Matches = matches
+                    Players = players
                 });
             }
 
