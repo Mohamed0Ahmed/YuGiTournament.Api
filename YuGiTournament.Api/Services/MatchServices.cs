@@ -43,7 +43,7 @@ namespace YuGiTournament.Api.Services
         public async Task<IEnumerable<object>> GetAllLeaguesWithMatchesAsync()
         {
             var leagues = await _unitOfWork.GetRepository<LeagueId>()
-                .GetAll()
+                .GetAll().Where(l => !l.IsDeleted)
                 .ToListAsync();
 
             if (leagues == null || leagues.Count == 0)

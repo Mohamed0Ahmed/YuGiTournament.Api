@@ -165,7 +165,7 @@ namespace YuGiTournament.Api.Services
             var players = await _unitOfWork.GetRepository<Player>()
                 .GetAll()
                 .Where(x => x.LeagueNumber == league.Id)
-                .OrderBy(x => x.Rank) 
+                .OrderBy(x => x.Rank)
                 .ToListAsync();
 
             return players;
@@ -174,7 +174,7 @@ namespace YuGiTournament.Api.Services
         public async Task<IEnumerable<object>> GetAllLeaguesWithRankAsync()
         {
             var leagues = await _unitOfWork.GetRepository<LeagueId>()
-                .GetAll()
+                .GetAll().Where(l => !l.IsDeleted)
                 .ToListAsync();
 
             if (leagues == null || leagues.Count == 0)
@@ -188,7 +188,7 @@ namespace YuGiTournament.Api.Services
                 var players = await _unitOfWork.GetRepository<Player>()
                     .GetAll()
                     .Where(p => p.LeagueNumber == league.Id)
-                    .OrderBy(p => p.Rank) 
+                    .OrderBy(p => p.Rank)
                     .Select(p => new
                     {
                         p.PlayerId,

@@ -88,7 +88,7 @@ namespace YuGiTournament.Api.Services
             catch (Exception)
             {
                 await transaction.RollbackAsync();
-                return new ApiResponse(false, "حدث خطأ اثناء انهاء الدوري");
+                return new ApiResponse(false, "حدث خطأ اثناء حذف الدوري");
             }
 
             return new ApiResponse(true, "تم حذف الدوري");

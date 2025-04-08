@@ -1,16 +1,8 @@
 ﻿namespace YuGiTournament.Api.ApiResponses
 {
-    public class ApiResponse
+    public class ApiResponse(bool success, string message)
     {
-        public bool Success { get; set; }
-        public string? Message { get; set; }
-
-        public ApiResponse() { }
-
-        public ApiResponse(bool success, string message)
-        {
-            Success = success;
-            Message = message;
-        }
+        public bool Success { get; set; } = success;
+        public string? Message { get; set; } = message;
     }
 }
