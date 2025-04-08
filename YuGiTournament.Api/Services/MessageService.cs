@@ -45,65 +45,33 @@ namespace YuGiTournament.Api.Services
             return new ApiResponse(true, "Message sent to admin.");
         }
 
-        public async Task<(ApiResponse Response, List<object> Messages)> GetInboxAsync(string adminId)
+        public async Task<(ApiResponse Response, List<Message> Messages)> GetInboxAsync(string adminId)
         {
             var messages = await _unitOfWork.GetRepository<Message>()
                 .GetAll()
-                .Where(m => m.SenderId != adminId && !m.IsDeleted)
-                .Select(m => new
-                {
-                    m.Id,
-                    m.SenderId,
-                    m.SenderFullName,
-                    m.SenderPhoneNumber,
-                    m.Content,
-                    m.IsRead,
-                    m.SentAt,
-                    m.IsDeleted
-                })
-                .ToListAsync();
+                .Where(m => m.SenderId != adminId && !m.IsDeleted).ToListAsync();
 
-            return (new ApiResponse(true, "Messages retrieved successfully."), messages.Cast<object>().ToList());
+            return (new ApiResponse(true, "Messages retrieved successfully."), messages);
         }
 
-        public async Task<(ApiResponse Response, List<object> Messages)> GetReadMessagesAsync(string adminId)
+        public async Task<(ApiResponse Response, List<Message> Messages)> GetReadMessagesAsync(string adminId)
         {
             var messages = await _unitOfWork.GetRepository<Message>()
                 .GetAll()
                 .Where(m => m.SenderId != adminId && m.IsRead && !m.IsDeleted)
-                .Select(m => new
-                {
-                    m.Id,
-                    m.SenderId,
-                    m.SenderFullName,
-                    m.SenderPhoneNumber,
-                    m.Content,
-                    m.IsRead,
-                    m.SentAt
-                })
                 .ToListAsync();
 
-            return (new ApiResponse(true, "Read messages retrieved successfully."), messages.Cast<object>().ToList());
+            return (new ApiResponse(true, "Read messages retrieved successfully."), messages);
         }
 
-        public async Task<(ApiResponse Response, List<object> Messages)> GetUnreadMessagesAsync(string adminId)
+        public async Task<(ApiResponse Response, List<Message> Messages)> GetUnreadMessagesAsync(string adminId)
         {
             var messages = await _unitOfWork.GetRepository<Message>()
                 .GetAll()
                 .Where(m => m.SenderId != adminId && !m.IsRead && !m.IsDeleted)
-                .Select(m => new
-                {
-                    m.Id,
-                    m.SenderId,
-                    m.SenderFullName,
-                    m.SenderPhoneNumber,
-                    m.Content,
-                    m.IsRead,
-                    m.SentAt
-                })
                 .ToListAsync();
 
-            return (new ApiResponse(true, "Unread messages retrieved successfully."), messages.Cast<object>().ToList());
+            return (new ApiResponse(true, "Unread messages retrieved successfully."), messages);
         }
 
         public async Task<ApiResponse> MarkAsync(int messageId, bool marked)
