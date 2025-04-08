@@ -19,24 +19,66 @@ namespace YuGiTournament.Api.Services
         {
 
             var notes = await _unitOfWork.GetRepository<Note>().GetAll().Where(n => n.IsDeleted != true).ToListAsync();
+            if (notes.Count == 0)
+                return (new ApiResponse(false, "No Notes Here"), notes);
 
-            return (new ApiResponse(true , "Note Returned Successfully"), notes);
+
+
+            return (new ApiResponse(true, "Note Returned Successfully"), notes);
 
         }
 
-        public Task<ApiResponse> HideNoteAsync(int messageId, bool marked)
+        public async Task<ApiResponse> ToggleHideNoteAsync(int noteId, bool marked)
         {
-            throw new NotImplementedException();
+
+            var note = await _unitOfWork.GetRepository<Note>()
+                                        .Find(n => n.Id == noteId)
+                                        .FirstOrDefaultAsync();
+
+            if (note == null)
+                return new ApiResponse(false, "مفيش ملاحظات بالاي دي ده");
+
+            note.IsHidden = !note.IsHidden;
+            _unitOfWork.GetRepository<Note>().Update(note);
+            await _unitOfWork.SaveChangesAsync();
+
+            var message = note.IsHidden ? "تم اخفاء الملاحظة" : "تم اظهار الملاحظة";
+            return new ApiResponse(true, message);
+
         }
 
-        public Task<ApiResponse> SoftDelete(int messageId, bool marked)
+        public async Task<ApiResponse> SoftDelete(int noteId)
         {
-            throw new NotImplementedException();
+            var note = await _unitOfWork.GetRepository<Note>()
+                                       .Find(n => n.Id == noteId)
+                                       .FirstOrDefaultAsync();
+
+            if (note == null)
+                return new ApiResponse(false, "مفيش ملاحظات بالاي دي ده");
+
+            if (note.IsDeleted == true)
+                return new ApiResponse(false, "الملاحظة تم مسحها بالفعل");
+
+
+            note.IsDeleted = true;
+            _unitOfWork.GetRepository<Note>().Update(note);
+            await _unitOfWork.SaveChangesAsync();
+
+            return new ApiResponse(true, "تم مسح الملاحظة");
         }
 
-        public Task<ApiResponse> WriteNote(string content)
+        public async Task<ApiResponse> WriteNote(string content)
         {
-            throw new NotImplementedException();
+
+            var note = new Note
+            {
+                Content = content
+            };
+
+            await _unitOfWork.GetRepository<Note>().AddAsync(note);
+            await _unitOfWork.SaveChangesAsync();
+
+            return new ApiResponse(true, "تم اضافة الملاحظة");
         }
     }
 }

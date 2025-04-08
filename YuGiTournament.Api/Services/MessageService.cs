@@ -45,30 +45,30 @@ namespace YuGiTournament.Api.Services
             return new ApiResponse(true, "Message sent to admin.");
         }
 
-        public async Task<(ApiResponse Response, List<Message> Messages)> GetInboxAsync(string adminId)
+        public async Task<(ApiResponse Response, List<Message> Messages)> GetInboxAsync()
         {
             var messages = await _unitOfWork.GetRepository<Message>()
                 .GetAll()
-                .Where(m => m.SenderId != adminId && !m.IsDeleted).ToListAsync();
+                .Where(m => !m.IsDeleted).ToListAsync();
 
             return (new ApiResponse(true, "Messages retrieved successfully."), messages);
         }
 
-        public async Task<(ApiResponse Response, List<Message> Messages)> GetReadMessagesAsync(string adminId)
+        public async Task<(ApiResponse Response, List<Message> Messages)> GetReadMessagesAsync()
         {
             var messages = await _unitOfWork.GetRepository<Message>()
                 .GetAll()
-                .Where(m => m.SenderId != adminId && m.IsRead && !m.IsDeleted)
+                .Where(m => m.IsRead && !m.IsDeleted)
                 .ToListAsync();
 
             return (new ApiResponse(true, "Read messages retrieved successfully."), messages);
         }
 
-        public async Task<(ApiResponse Response, List<Message> Messages)> GetUnreadMessagesAsync(string adminId)
+        public async Task<(ApiResponse Response, List<Message> Messages)> GetUnreadMessagesAsync()
         {
             var messages = await _unitOfWork.GetRepository<Message>()
                 .GetAll()
-                .Where(m => m.SenderId != adminId && !m.IsRead && !m.IsDeleted)
+                .Where(m => !m.IsRead && !m.IsDeleted)
                 .ToListAsync();
 
             return (new ApiResponse(true, "Unread messages retrieved successfully."), messages);

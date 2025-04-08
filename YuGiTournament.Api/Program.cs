@@ -25,6 +25,7 @@ namespace YuGiTournament.Api
             builder.Services.AddScoped<IPlayerService, PlayerService>();
             builder.Services.AddScoped<ILeagueResetService, LeagueResetService>();
             builder.Services.AddScoped<IMessageService, MessageService>();
+            builder.Services.AddScoped<INoteService, NoteService>();
             builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 
             builder.Services.AddDbContext<ApplicationDbContext>(options =>

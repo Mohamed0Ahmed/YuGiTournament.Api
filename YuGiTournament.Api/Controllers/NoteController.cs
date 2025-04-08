@@ -20,10 +20,8 @@ namespace YuGiTournament.Api.Controllers
 
 
 
-
-
-        [Authorize(Roles = "admin")]
-        [HttpPost("send")]
+        [Authorize(Roles = "Admin")]
+        [HttpPost("write")]
         public async Task<IActionResult> WriteNote([FromBody] NoteDto note)
         {
             var response = await _noteService.WriteNote(note.Content);
@@ -35,25 +33,22 @@ namespace YuGiTournament.Api.Controllers
             return Ok(response);
         }
 
-        [Authorize(Roles = "Admin")]
-        [HttpGet("inbox")]
+
+        [HttpGet("notes")]
         public async Task<IActionResult> GetNotes()
         {
-
-
-            var (response, messages) = await _noteService.GetNotesAsync();
-            return Ok(new { response.Success, response.Message, Messages = messages });
+            var (response, notes) = await _noteService.GetNotesAsync();
+            return Ok(new { response.Success, response.Message, Notes = notes });
         }
 
 
 
 
-
         [Authorize(Roles = "Admin")]
-        [HttpPost("mark/{noteId}")]
+        [HttpPost("hide/{noteId}")]
         public async Task<IActionResult> HideNoteToggle(int NoteId, [FromBody] HideNoteDto note)
         {
-            var response = await _noteService.HideNoteAsync(NoteId, note.Marked);
+            var response = await _noteService.ToggleHideNoteAsync(NoteId, note.Marked);
             if (!response.Success)
             {
                 return NotFound(response);
@@ -62,11 +57,14 @@ namespace YuGiTournament.Api.Controllers
             return Ok(response);
         }
 
+
+
+
         [Authorize(Roles = "Admin")]
         [HttpPost("delete/{noteId}")]
-        public async Task<IActionResult> DeleteNote(int NoteId, [FromBody] HideNoteDto note)
+        public async Task<IActionResult> DeleteNote(int NoteId)
         {
-            var response = await _noteService.SoftDelete(NoteId, note.Marked);
+            var response = await _noteService.SoftDelete(NoteId);
             if (!response.Success)
             {
                 return NotFound(response);

@@ -41,13 +41,9 @@ namespace YuGiTournament.Api.Controllers
         [HttpGet("inbox")]
         public async Task<IActionResult> GetInbox()
         {
-            var adminId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            if (string.IsNullOrEmpty(adminId))
-            {
-                return Unauthorized(new ApiResponse(false, "Unauthorized."));
-            }
+      
 
-            var (response, messages) = await _messageService.GetInboxAsync(adminId);
+            var (response, messages) = await _messageService.GetInboxAsync();
             return Ok(new { response.Success, response.Message, Messages = messages });
         }
 
@@ -55,13 +51,9 @@ namespace YuGiTournament.Api.Controllers
         [HttpGet("read-messages")]
         public async Task<IActionResult> GetReadMessages()
         {
-            var adminId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            if (string.IsNullOrEmpty(adminId))
-            {
-                return Unauthorized(new ApiResponse(false, "Unauthorized."));
-            }
+           
 
-            var (response, messages) = await _messageService.GetReadMessagesAsync(adminId);
+            var (response, messages) = await _messageService.GetReadMessagesAsync();
             return Ok(new { response.Success, response.Message, Messages = messages });
         }
 
@@ -69,13 +61,8 @@ namespace YuGiTournament.Api.Controllers
         [HttpGet("unread-messages")]
         public async Task<IActionResult> GetUnreadMessages()
         {
-            var adminId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            if (string.IsNullOrEmpty(adminId))
-            {
-                return Unauthorized(new ApiResponse(false, "Unauthorized."));
-            }
 
-            var (response, messages) = await _messageService.GetUnreadMessagesAsync(adminId);
+            var (response, messages) = await _messageService.GetUnreadMessagesAsync();
             return Ok(new { response.Success, response.Message, Messages = messages });
         }
 
