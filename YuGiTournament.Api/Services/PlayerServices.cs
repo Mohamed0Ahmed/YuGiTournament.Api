@@ -38,6 +38,7 @@ namespace YuGiTournament.Api.Services
             try
             {
                 await _unitOfWork.BeginTransactionAsync();
+                var dbContext = _unitOfWork.GetDbContext();
 
                 var playerToDelete = await _unitOfWork.GetRepository<Player>().Find(p => p.PlayerId == playerId).FirstOrDefaultAsync();
                 if (playerToDelete == null)
@@ -89,6 +90,7 @@ namespace YuGiTournament.Api.Services
 
                 await _unitOfWork.SaveChangesAsync();
                 await _unitOfWork.CommitAsync();
+                await dbContext.Database.ExecuteSqlRawAsync("EXEC UpdatePlayersRanking");
 
                 return new ApiResponse(true, $"تم حذف اللاعب {playerToDelete.FullName} وكل مبارياته والجولات المرتبطة بيه، وتم تعديل إحصائيات اللاعبين الآخرين.");
             }
@@ -102,6 +104,8 @@ namespace YuGiTournament.Api.Services
         public async Task<ApiResponse> AddPlayerAsync(string fullName)
         {
             var player = new Player { FullName = fullName };
+            var dbContext = _unitOfWork.GetDbContext();
+
 
             var league = await _unitOfWork.GetRepository<LeagueId>()
                 .Find(x => x.IsFinished == false)
@@ -148,6 +152,8 @@ namespace YuGiTournament.Api.Services
             {
                 await _unitOfWork.GetRepository<Match>().AddRangeAsync(matches);
                 await _unitOfWork.SaveChangesAsync();
+                await dbContext.Database.ExecuteSqlRawAsync("EXEC UpdatePlayersRanking");
+
             }
 
             return new ApiResponse(true, $"تم اضافة اللاعب {player.FullName} وكل مبارياته والجولات المرتبطة بيه.");

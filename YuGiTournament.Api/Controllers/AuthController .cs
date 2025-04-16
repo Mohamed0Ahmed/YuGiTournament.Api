@@ -1,13 +1,7 @@
-﻿using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Identity;
-using Microsoft.IdentityModel.Tokens;
-using System.IdentityModel.Tokens.Jwt;
-using System.Security.Claims;
-using System.Text;
-using YuGiTournament.Api.Identities;
+﻿using Microsoft.AspNetCore.Mvc;
 using YuGiTournament.Api.DTOs;
 using YuGiTournament.Api.ApiResponses;
+using YuGiTournament.Api.Services.Abstractions;
 
 namespace YuGiTournament.Api.Controllers
 {
@@ -15,127 +9,65 @@ namespace YuGiTournament.Api.Controllers
     [ApiController]
     public class AuthController : ControllerBase
     {
-        private readonly UserManager<ApplicationUser> _userManager;
+        private readonly IAuthService _authService;
 
-        private readonly IConfiguration _configuration;
-
-        public AuthController(UserManager<ApplicationUser> userManager, IConfiguration configuration)
+        public AuthController(IAuthService authService)
         {
-            _userManager = userManager;
-            _configuration = configuration;
+            _authService = authService;
         }
 
         [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody] LoginDto model)
         {
-            var user = await _userManager.FindByEmailAsync(model.Email);
-            if (user == null || !(await _userManager.CheckPasswordAsync(user, model.Password)))
+            var (success, message, token) = await _authService.LoginAsync(model);
+            if (!success)
             {
-                return Unauthorized(new ApiResponse(false, "Invalid email or password."));
+                return Unauthorized(new ApiResponse(false, message));
             }
 
-            var roles = await _userManager.GetRolesAsync(user);
-            var token = GenerateJwtToken(user, roles);
-            return Ok(new { Success = true, Message = "Login successful.", Token = token });
+            return Ok(new { Success = true, Message = message, Token = token });
         }
 
         [HttpPost("player-login")]
         public async Task<IActionResult> PlayerLogin([FromBody] PlayerLoginDto model)
         {
-            var user = await _userManager.FindByNameAsync(model.PhoneNumber);
-            if (user == null || !(await _userManager.CheckPasswordAsync(user, model.Password)))
+            var (success, message, token) = await _authService.PlayerLoginAsync(model);
+            if (!success)
             {
-                return Unauthorized(new ApiResponse(false, "Invalid phone number or password."));
+                return Unauthorized(new ApiResponse(false, message));
             }
 
-            var roles = await _userManager.GetRolesAsync(user);
-            var token = GenerateJwtToken(user, roles);
-            return Ok(new { Success = true, Message = "Login successful.", Token = token });
+            return Ok(new { Success = true, Message = message, Token = token });
         }
 
         [HttpPost("register-player")]
         public async Task<IActionResult> RegisterPlayer([FromBody] RegisterPlayerDto model)
         {
-            var user = new ApplicationUser
+            var (success, message) = await _authService.RegisterPlayerAsync(model);
+            if (!success)
             {
-                UserName = model.PhoneNumber,
-                PhoneNumber = model.PhoneNumber,
-                Email = $"{model.PhoneNumber}@yugi.com",
-                EmailConfirmed = true,
-                FName = model.FirstName,
-                LName = model.LastName
-            };
-
-            var result = await _userManager.CreateAsync(user, model.Password);
-            if (!result.Succeeded)
-            {
-                var errorMessage = string.Join(", ", result.Errors.Select(e => e.Description));
-                return BadRequest(new ApiResponse(false, errorMessage));
+                return BadRequest(new ApiResponse(false, message));
             }
 
-            await _userManager.AddToRoleAsync(user, "Player");
-            return Ok(new ApiResponse(true, "Player registered successfully."));
+            return Ok(new ApiResponse(true, message));
         }
 
         [HttpPost("reset-password")]
         public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordDto model)
         {
-            var user = await _userManager.FindByNameAsync(model.PhoneNumber);
-            if (user == null)
+            var (success, message) = await _authService.ResetPasswordAsync(model);
+            if (!success)
             {
-                return NotFound(new ApiResponse(false, "Player not found."));
+                return BadRequest(new ApiResponse(false, message));
             }
 
-            var token = await _userManager.GeneratePasswordResetTokenAsync(user);
-            var result = await _userManager.ResetPasswordAsync(user, token, model.NewPassword);
-            if (!result.Succeeded)
-            {
-                var errorMessage = string.Join(", ", result.Errors.Select(e => e.Description));
-                return BadRequest(new ApiResponse(false, errorMessage));
-            }
-
-            return Ok(new ApiResponse(true, "Password reset successfully."));
+            return Ok(new ApiResponse(true, message));
         }
 
         [HttpPost("logout")]
         public IActionResult Logout()
         {
-            return Ok(new ApiResponse(true, "Logout successful. Just remove the token on client side."));
-        }
-
-        //****************************************
-
-        private string GenerateJwtToken(ApplicationUser user, IList<string> roles)
-        {
-            var claims = new List<Claim>
-            {
-                new (JwtRegisteredClaimNames.Sub, user.Id),
-                new (JwtRegisteredClaimNames.Email, user.Email!),
-                new (ClaimTypes.Name, user.UserName!)
-            };
-
-            claims.AddRange(roles.Select(role => new Claim("role", role)));
-
-            var jwtKey = _configuration["Jwt:Key"];
-            if (string.IsNullOrWhiteSpace(jwtKey))
-            {
-                throw new InvalidOperationException("JWT Key is missing from configuration.");
-            }
-
-            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey));
-            var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
-
-            var expireDays = int.Parse(_configuration["Jwt:ExpireDays"] ?? "7");
-
-            var token = new JwtSecurityToken(
-                issuer: _configuration["Jwt:Issuer"],
-                audience: _configuration["Jwt:Audience"],
-                claims: claims,
-                expires: DateTime.UtcNow.AddDays(expireDays),
-                signingCredentials: creds
-            );
-
-            return new JwtSecurityTokenHandler().WriteToken(token);
+            return Ok(new ApiResponse(true, "Logout successful"));
         }
     }
 
