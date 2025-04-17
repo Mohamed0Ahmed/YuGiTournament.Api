@@ -1,103 +1,84 @@
-﻿using YuGiTournament.Api.Models;
-using Microsoft.EntityFrameworkCore;
-using YuGiTournament.Api.Services.Abstractions;
-using YuGiTournament.Api.DTOs;
-using YuGiTournament.Api.ApiResponses;
+﻿using Microsoft.EntityFrameworkCore;
 using YuGiTournament.Api.Abstractions;
+using YuGiTournament.Api.ApiResponses;
+using YuGiTournament.Api.DTOs;
+using YuGiTournament.Api.Models;
+using YuGiTournament.Api.Models.ViewModels;
+using YuGiTournament.Api.Services.Abstractions;
 
 namespace YuGiTournament.Api.Services
 {
     public class MatchService : IMatchService
     {
         private readonly IUnitOfWork _unitOfWork;
+        private readonly ILogger<MatchService> _logger;
+        private readonly int _maxRoundsPerMatch;
 
-        public MatchService(IUnitOfWork unitOfWork)
+        public MatchService(IUnitOfWork unitOfWork, ILogger<MatchService> logger, IConfiguration configuration)
         {
             _unitOfWork = unitOfWork;
+            _logger = logger;
+            _maxRoundsPerMatch = configuration.GetValue<int>("GameRules:MaxRoundsPerMatch");
         }
 
-        public async Task<IEnumerable<object>> GetAllMatchesAsync()
+        public async Task<IEnumerable<MatchViewModel>> GetAllMatchesAsync()
         {
-
             var league = await _unitOfWork.GetRepository<LeagueId>()
-              .Find(x => x.IsFinished == false)
-              .FirstOrDefaultAsync();
+                .Find(x => x.IsFinished == false)
+                .FirstOrDefaultAsync();
 
-            return league == null ? []
-                : (IEnumerable<object>)await _unitOfWork.GetRepository<Match>()
-                .GetAll().Where(m => m.LeagueNumber == league.Id)
-                .Select(m => new
-                {
-                    m.MatchId,
-                    m.Score1,
-                    m.Score2,
-                    m.IsCompleted,
-                    Player1Name = m.Player1.FullName,
-                    Player2Name = m.Player2.FullName,
-                    m.Player1Id,
-                    m.Player2Id,
-                })
-                .ToListAsync();
+            if (league == null)
+                return [];
+
+            return await GetMatchesByLeagueAsync(league.Id);
         }
 
-        public async Task<IEnumerable<object>> GetAllLeaguesWithMatchesAsync()
+        public async Task<IEnumerable<LeagueWithMatchesViewModel>> GetAllLeaguesWithMatchesAsync()
         {
             var leagues = await _unitOfWork.GetRepository<LeagueId>()
-                .GetAll().Where(l => !l.IsDeleted)
+                .GetAll()
+                .Where(l => !l.IsDeleted)
                 .ToListAsync();
 
             if (leagues == null || leagues.Count == 0)
-            {
                 return [];
-            }
 
-            var result = new List<object>();
+            var result = new List<LeagueWithMatchesViewModel>();
             foreach (var league in leagues)
             {
-                var matches = await _unitOfWork.GetRepository<Match>()
-                    .GetAll()
-                    .Where(m => m.LeagueNumber == league.Id)
-                    .Select(m => new
-                    {
-                        m.MatchId,
-                        m.Score1,
-                        m.Score2,
-                        m.IsCompleted,
-                        Player1Name = m.Player1.FullName,
-                        Player2Name = m.Player2.FullName,
-                        m.Player1Id,
-                        m.Player2Id,
-                    })
-                    .ToListAsync();
-
-                result.Add(new
+                var matches = await GetMatchesByLeagueAsync(league.Id);
+                result.Add(new LeagueWithMatchesViewModel
                 {
                     LeagueId = league.Id,
                     LeagueName = league.Name,
                     LeagueDescription = league.Description,
-                    LeagueType = league.TypeOfLeague,
-                    league.IsFinished,
-                    league.CreatedOn,
-                    Matches = matches,
+                    LeagueType = league.TypeOfLeague.ToString(),
+                    IsFinished = league.IsFinished,
+                    CreatedOn = league.CreatedOn,
+                    Matches = matches
                 });
             }
 
             return result;
         }
 
-        public async Task<object?> GetMatchByIdAsync(int matchId)
+        public async Task<MatchViewModel?> GetMatchByIdAsync(int matchId)
         {
             return await _unitOfWork.GetRepository<Match>()
                 .GetAll()
+                .Include(m => m.Player1)
+                .Include(m => m.Player2)
                 .Where(m => m.MatchId == matchId)
-                .Select(m => new
+                .Select(m => new MatchViewModel
                 {
-                    m.MatchId,
-                    m.Score1,
-                    m.Score2,
-                    m.IsCompleted,
+                    MatchId = m.MatchId,
+                    Score1 = m.Score1,
+                    Score2 = m.Score2,
+                    IsCompleted = m.IsCompleted,
                     Player1Name = m.Player1.FullName,
-                    Player2Name = m.Player2.FullName
+                    Player2Name = m.Player2.FullName,
+                    Player1Id = m.Player1Id,
+                    Player2Id = m.Player2Id
                 })
                 .FirstOrDefaultAsync();
         }
@@ -106,9 +87,7 @@ namespace YuGiTournament.Api.Services
         {
             try
             {
-                var dbContext = _unitOfWork.GetDbContext();
-                await _unitOfWork.BeginTransactionAsync();
-
+                using var transaction = await _unitOfWork.GetDbContext().Database.BeginTransactionAsync();
                 var match = await _unitOfWork.GetRepository<Match>()
                     .GetAll()
                     .Include(m => m.Player1)
@@ -160,45 +139,61 @@ namespace YuGiTournament.Api.Services
                 player2.UpdateStats();
 
                 await _unitOfWork.SaveChangesAsync();
-                await dbContext.Database.ExecuteSqlRawAsync("EXEC UpdatePlayersRanking");
-
-                await _unitOfWork.CommitAsync();
+                await _unitOfWork.GetDbContext().Database.ExecuteSqlRawAsync("EXEC UpdatePlayersRanking");
+                await transaction.CommitAsync();
 
                 return new ApiResponse(true, "تم إعادة تعيين الماتش من البداية.");
             }
+            catch (DbUpdateException ex)
+            {
+                _logger.LogError(ex, "Database error while resetting match {MatchId}", matchId);
+                return new ApiResponse(false, "خطأ في قاعدة البيانات أثناء إعادة تعيين الماتش.");
+            }
             catch (Exception ex)
             {
-                await _unitOfWork.RollbackAsync();
+                _logger.LogError(ex, "Unexpected error while resetting match {MatchId}", matchId);
                 return new ApiResponse(false, $"حصل خطأ أثناء إعادة تعيين الماتش: {ex.Message}");
             }
         }
 
         public async Task<ApiResponse> UpdateMatchResultAsync(int matchId, MatchResultDto resultDto)
         {
-            var dbContext = _unitOfWork.GetDbContext();
-            using var transaction = await _unitOfWork.GetDbContext().Database.BeginTransactionAsync();
+            if (resultDto == null)
+                return new ApiResponse(false, "بيانات نتيجة المباراة غير صالحة");
+
             try
             {
-                var match = await _unitOfWork.GetRepository<Match>().Find(match => match.MatchId == matchId).FirstOrDefaultAsync();
+                using var transaction = await _unitOfWork.GetDbContext().Database.BeginTransactionAsync();
+                var match = await _unitOfWork.GetRepository<Match>()
+                    .Find(match => match.MatchId == matchId)
+                    .FirstOrDefaultAsync();
+
                 if (match == null)
                     return new ApiResponse(false, "No Match Here");
 
-                var player1 = await _unitOfWork.GetRepository<Player>().Find(player => player.PlayerId == match.Player1Id).FirstOrDefaultAsync();
-                var player2 = await _unitOfWork.GetRepository<Player>().Find(player => player.PlayerId == match.Player2Id).FirstOrDefaultAsync();
+                var player1 = await _unitOfWork.GetRepository<Player>()
+                    .Find(player => player.PlayerId == match.Player1Id)
+                    .FirstOrDefaultAsync();
+                var player2 = await _unitOfWork.GetRepository<Player>()
+                    .Find(player => player.PlayerId == match.Player2Id)
+                    .FirstOrDefaultAsync();
 
                 var league = await _unitOfWork.GetRepository<LeagueId>()
-                .Find(x => x.IsFinished == false)
-                .FirstOrDefaultAsync();
+                    .Find(x => x.IsFinished == false)
+                    .FirstOrDefaultAsync();
 
                 if (league == null)
-                    return new ApiResponse(false, $"الدوري لسه مبدأش "); ;
+                    return new ApiResponse(false, "الدوري لسه مبدأش");
 
                 if (player1 == null || player2 == null)
                     return new ApiResponse(false, "All Players Must Be There");
 
-                int matchCount = await _unitOfWork.GetRepository<MatchRound>().GetAll().CountAsync(mr => mr.MatchId == matchId);
-                if (matchCount >= 5)
-                    return new ApiResponse(false, "خلاص بقي هم لعبوا ال 5 ماتشات والله");
+                int matchCount = await _unitOfWork.GetRepository<MatchRound>()
+                    .GetAll()
+                    .CountAsync(mr => mr.MatchId == matchId);
+
+                if (matchCount >= _maxRoundsPerMatch)
+                    return new ApiResponse(false, $"خلاص بقي هم لعبوا ال {_maxRoundsPerMatch} ماتشات والله");
 
                 var newRound = new MatchRound
                 {
@@ -238,7 +233,7 @@ namespace YuGiTournament.Api.Services
                 }
 
                 await _unitOfWork.GetRepository<MatchRound>().AddAsync(newRound);
-                match.IsCompleted = matchCount + 1 == 5;
+                match.IsCompleted = matchCount + 1 == _maxRoundsPerMatch;
                 player1.UpdateStats();
                 player2.UpdateStats();
 
@@ -247,17 +242,47 @@ namespace YuGiTournament.Api.Services
                 _unitOfWork.GetRepository<Match>().Update(match);
 
                 await _unitOfWork.SaveChangesAsync();
-                await dbContext.Database.ExecuteSqlRawAsync("EXEC UpdatePlayersRanking");
+                await _unitOfWork.GetDbContext().Database.ExecuteSqlRawAsync("EXEC UpdatePlayersRanking");
                 await transaction.CommitAsync();
 
                 return new ApiResponse(true, responseMessage);
             }
+            catch (DbUpdateException ex)
+            {
+                _logger.LogError(ex, "Database error while updating match {MatchId}", matchId);
+                return new ApiResponse(false, "خطأ في قاعدة البيانات أثناء تحديث الماتش.");
+            }
             catch (Exception ex)
             {
-                await transaction.RollbackAsync();
+                _logger.LogError(ex, "Unexpected error while updating match {MatchId}", matchId);
                 return new ApiResponse(false, $"Error updating match: {ex.Message}");
             }
         }
+
+
+
+        //*****************************s
+        private async Task<List<MatchViewModel>> GetMatchesByLeagueAsync(int leagueId)
+        {
+            return await _unitOfWork.GetRepository<Match>()
+                .GetAll()
+                .Include(m => m.Player1)
+                .Include(m => m.Player2)
+                .Where(m => m.LeagueNumber == leagueId)
+                .Select(m => new MatchViewModel
+                {
+                    MatchId = m.MatchId,
+                    Score1 = m.Score1,
+                    Score2 = m.Score2,
+                    IsCompleted = m.IsCompleted,
+                    Player1Name = m.Player1.FullName,
+                    Player2Name = m.Player2.FullName,
+                    Player1Id = m.Player1Id,
+                    Player2Id = m.Player2Id
+                })
+                .ToListAsync();
+        }
+
 
     }
 }
