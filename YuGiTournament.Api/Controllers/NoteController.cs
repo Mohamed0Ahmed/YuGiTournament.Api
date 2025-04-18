@@ -46,9 +46,9 @@ namespace YuGiTournament.Api.Controllers
 
         [Authorize(Roles = "Admin")]
         [HttpPost("hide/{noteId}")]
-        public async Task<IActionResult> HideNoteToggle(int NoteId, [FromBody] HideNoteDto note)
+        public async Task<IActionResult> HideNoteToggle(int NoteId)
         {
-            var response = await _noteService.ToggleHideNoteAsync(NoteId, note.Marked);
+            var response = await _noteService.ToggleHideNoteAsync(NoteId);
             if (!response.Success)
             {
                 return NotFound(response);

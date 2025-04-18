@@ -8,7 +8,7 @@ namespace YuGiTournament.Api.Services.Abstractions
 
         Task<ApiResponse> WriteNote( string content);
         Task<(ApiResponse Response, List<Note> Notes)> GetNotesAsync();
-        Task<ApiResponse> ToggleHideNoteAsync(int noteId, bool marked);
+        Task<ApiResponse> ToggleHideNoteAsync(int noteId);
         Task<ApiResponse> SoftDelete(int noteId);
 
     }
