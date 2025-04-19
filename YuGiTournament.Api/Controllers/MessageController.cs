@@ -41,8 +41,6 @@ namespace YuGiTournament.Api.Controllers
         [HttpGet("inbox")]
         public async Task<IActionResult> GetInbox()
         {
-      
-
             var (response, messages) = await _messageService.GetInboxAsync();
             return Ok(new { response.Success, response.Message, Messages = messages });
         }
@@ -51,8 +49,6 @@ namespace YuGiTournament.Api.Controllers
         [HttpGet("read-messages")]
         public async Task<IActionResult> GetReadMessages()
         {
-           
-
             var (response, messages) = await _messageService.GetReadMessagesAsync();
             return Ok(new { response.Success, response.Message, Messages = messages });
         }
@@ -61,7 +57,6 @@ namespace YuGiTournament.Api.Controllers
         [HttpGet("unread-messages")]
         public async Task<IActionResult> GetUnreadMessages()
         {
-
             var (response, messages) = await _messageService.GetUnreadMessagesAsync();
             return Ok(new { response.Success, response.Message, Messages = messages });
         }
@@ -92,8 +87,37 @@ namespace YuGiTournament.Api.Controllers
             return Ok(response);
         }
 
+        [Authorize(Roles = "Player")]
+        [HttpGet("my-messages")]
+        public async Task<IActionResult> GetPlayerMessages()
+        {
+            var playerId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(playerId))
+            {
+                return Unauthorized(new ApiResponse(false, "Unauthorized."));
+            }
 
+            var (response, messages) = await _messageService.GetPlayerMessagesAsync(playerId);
+            return Ok(new { response.Success, response.Message, Messages = messages });
+        }
+
+        [Authorize(Roles = "Admin")]
+        [HttpPost("reply/{playerId}")]
+        public async Task<IActionResult> SendAdminReply(string playerId, [FromBody] SendMessageRequestDto request)
+        {
+            var adminId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(adminId))
+            {
+                return Unauthorized(new ApiResponse(false, "Unauthorized."));
+            }
+
+            var response = await _messageService.SendAdminReplyAsync(adminId, playerId, request.Content);
+            if (!response.Success)
+            {
+                return NotFound(response);
+            }
+
+            return Ok(response);
+        }
     }
-
-
 }

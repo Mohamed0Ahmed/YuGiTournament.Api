@@ -10,5 +10,6 @@
         public bool IsRead { get; set; }
         public bool IsDeleted { get; set; } = false;
         public DateTime SentAt { get; set; }
+        public bool IsFromAdmin { get; set; }
     }
 }

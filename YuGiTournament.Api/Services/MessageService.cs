@@ -37,6 +37,7 @@ namespace YuGiTournament.Api.Services
                 SenderPhoneNumber = player.PhoneNumber!,
                 Content = content,
                 IsRead = false,
+                IsFromAdmin = false, 
                 SentAt = DateTime.UtcNow
             };
 
@@ -49,7 +50,8 @@ namespace YuGiTournament.Api.Services
         {
             var messages = await _unitOfWork.GetRepository<Message>()
                 .GetAll()
-                .Where(m => !m.IsDeleted).ToListAsync();
+                .Where(m => !m.IsDeleted)
+                .ToListAsync();
 
             return (new ApiResponse(true, "Messages retrieved successfully."), messages);
         }
@@ -102,7 +104,6 @@ namespace YuGiTournament.Api.Services
 
         public async Task<ApiResponse> SoftDelete(int messageId, bool marked)
         {
-
             var message = _unitOfWork.GetRepository<Message>().GetAll().FirstOrDefault(m => m.Id == messageId);
             if (message == null)
                 return new ApiResponse(false, "Message not found.");
@@ -126,7 +127,50 @@ namespace YuGiTournament.Api.Services
             }
         }
 
+        public async Task<(ApiResponse Response, List<Message> Messages)> GetPlayerMessagesAsync(string playerId)
+        {
+            var player = await _unitOfWork.GetRepository<ApplicationUser>().GetByIdAsync(playerId);
+            if (player == null)
+            {
+                return (new ApiResponse(false, "Player not found."), new List<Message>());
+            }
 
+            var messages = await _unitOfWork.GetRepository<Message>()
+                .GetAll()
+                .Where(m => m.SenderId == playerId && !m.IsDeleted) 
+                .OrderBy(m => m.SentAt)
+                .ToListAsync();
+
+            return (new ApiResponse(true, "Player messages retrieved successfully."), messages);
+        }
+        public async Task<ApiResponse> SendAdminReplyAsync(string adminId, string playerId, string content)
+        {
+            var admin = await _unitOfWork.GetRepository<ApplicationUser>().GetByIdAsync(adminId);
+            if (admin == null)
+            {
+                return new ApiResponse(false, "Admin not found.");
+            }
+
+            var player = await _unitOfWork.GetRepository<ApplicationUser>().GetByIdAsync(playerId);
+            if (player == null)
+            {
+                return new ApiResponse(false, "Player not found.");
+            }
+
+            var message = new Message
+            {
+                SenderId = playerId, 
+                SenderFullName = "Admin",
+                SenderPhoneNumber = admin.PhoneNumber ?? "N/A", 
+                Content = content,
+                IsRead = false,
+                IsFromAdmin = true,
+                SentAt = DateTime.UtcNow
+            };
+
+            await _unitOfWork.GetRepository<Message>().AddAsync(message);
+            await _unitOfWork.SaveChangesAsync();
+            return new ApiResponse(true, "Admin reply sent.");
+        }
     }
 }
-

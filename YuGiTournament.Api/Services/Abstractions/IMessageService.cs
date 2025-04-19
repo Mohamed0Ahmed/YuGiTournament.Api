@@ -11,5 +11,7 @@ namespace YuGiTournament.Api.Services.Abstractions
         Task<(ApiResponse Response, List<Message> Messages)> GetUnreadMessagesAsync();
         Task<ApiResponse> MarkAsync(int messageId, bool marked);
         Task<ApiResponse> SoftDelete(int messageId, bool marked);
+        Task<(ApiResponse Response, List<Message> Messages)> GetPlayerMessagesAsync(string playerId);
+        Task<ApiResponse> SendAdminReplyAsync(string adminId, string playerId, string content); 
     }
 }
