@@ -26,11 +26,12 @@ namespace YuGiTournament.Api
             builder.Services.AddScoped<ILeagueResetService, LeagueResetService>();
             builder.Services.AddScoped<IMessageService, MessageService>();
             builder.Services.AddScoped<INoteService, NoteService>();
+            builder.Services.AddScoped<IPlayerRankingService, PlayerRankingService>();
             builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
             builder.Services.AddScoped<IAuthService, AuthService>();
 
             builder.Services.AddDbContext<ApplicationDbContext>(options =>
-                options.UseSqlServer(builder.Configuration.GetConnectionString("YuGiContext")));
+                options.UseNpgsql(builder.Configuration.GetConnectionString("YuGiContext")));
 
             builder.Services.AddIdentity<ApplicationUser, IdentityRole>()
                            .AddEntityFrameworkStores<ApplicationDbContext>()

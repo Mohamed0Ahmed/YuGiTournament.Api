@@ -10,11 +10,13 @@ namespace YuGiTournament.Api.Services
     {
 
         private readonly IUnitOfWork _unitOfWork;
+        private readonly IPlayerRankingService _playerRankingService;
 
-        public PlayerService(IUnitOfWork unitOfWork)
+        public PlayerService(IUnitOfWork unitOfWork, IPlayerRankingService playerRankingService)
         {
 
             _unitOfWork = unitOfWork;
+            _playerRankingService = playerRankingService;
         }
 
         public async Task<IEnumerable<Player>> GetAllPlayersAsync()
@@ -90,7 +92,12 @@ namespace YuGiTournament.Api.Services
 
                 await _unitOfWork.SaveChangesAsync();
                 await _unitOfWork.CommitAsync();
-                await dbContext.Database.ExecuteSqlRawAsync("EXEC UpdatePlayersRanking");
+
+                var leaguePlayers = await _unitOfWork.GetRepository<Player>().GetAll().Where(p => p.LeagueNumber == playerToDelete.LeagueNumber).ToListAsync();
+                var leagueMatches = await _unitOfWork.GetRepository<Match>().GetAll().Where(m => m.LeagueNumber == playerToDelete.LeagueNumber).ToListAsync();
+                var rankedPlayers = _playerRankingService.RankPlayers(leaguePlayers, leagueMatches);
+                foreach (var p in rankedPlayers) { var dbPlayer = leaguePlayers.First(x => x.PlayerId == p.PlayerId); dbPlayer.Rank = p.Rank; }
+                await _unitOfWork.SaveChangesAsync();
 
                 return new ApiResponse(true, $"تم حذف اللاعب {playerToDelete.FullName} وكل مبارياته والجولات المرتبطة بيه، وتم تعديل إحصائيات اللاعبين الآخرين.");
             }
@@ -119,9 +126,8 @@ namespace YuGiTournament.Api.Services
             if (ExistPlayer != null)
                 return new ApiResponse(false, $"تم اضافة اللاعب {player.FullName} من قبل !!!");
 
-            await _unitOfWork.GetRepository<Player>().AddAsync(player);
             player.LeagueNumber = league.Id;
-
+            await _unitOfWork.GetRepository<Player>().AddAsync(player);
             await _unitOfWork.SaveChangesAsync();
 
             var otherPlayers = await _unitOfWork.GetRepository<Player>()
@@ -152,8 +158,11 @@ namespace YuGiTournament.Api.Services
             {
                 await _unitOfWork.GetRepository<Match>().AddRangeAsync(matches);
                 await _unitOfWork.SaveChangesAsync();
-                await dbContext.Database.ExecuteSqlRawAsync("EXEC UpdatePlayersRanking");
-
+                var leaguePlayers = await _unitOfWork.GetRepository<Player>().GetAll().Where(p => p.LeagueNumber == league.Id).ToListAsync();
+                var leagueMatches = await _unitOfWork.GetRepository<Match>().GetAll().Where(m => m.LeagueNumber == league.Id).ToListAsync();
+                var rankedPlayers = _playerRankingService.RankPlayers(leaguePlayers, leagueMatches);
+                foreach (var p in rankedPlayers) { var dbPlayer = leaguePlayers.First(x => x.PlayerId == p.PlayerId); dbPlayer.Rank = p.Rank; }
+                await _unitOfWork.SaveChangesAsync();
             }
 
             return new ApiResponse(true, $"تم اضافة اللاعب {player.FullName} وكل مبارياته والجولات المرتبطة بيه.");

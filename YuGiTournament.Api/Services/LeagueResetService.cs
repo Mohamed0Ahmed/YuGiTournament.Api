@@ -46,15 +46,15 @@ namespace YuGiTournament.Api.Services
 
                 _unitOfWork.GetRepository<LeagueId>().Update(league);
 
-                await _unitOfWork.GetDbContext().Database.ExecuteSqlRawAsync("DELETE FROM Messages");
-                await _unitOfWork.GetDbContext().Database.ExecuteSqlRawAsync("DBCC CHECKIDENT ('Messages', RESEED, 0)");
+                // await _unitOfWork.GetDbContext().Database.ExecuteSqlRawAsync("DELETE FROM \"Messages\"");
+                // await _unitOfWork.GetDbContext().Database.ExecuteSqlRawAsync("ALTER SEQUENCE \"Messages_Id_seq\" RESTART WITH 1");
 
                 await dbContext.Database.ExecuteSqlRawAsync(
-                    "UPDATE Matches SET IsDeleted = 1 WHERE LeagueNumber = {0}", leagueId);
+                    "UPDATE \"Matches\" SET \"IsDeleted\" = TRUE WHERE \"LeagueNumber\" = {0}", leagueId);
                 await dbContext.Database.ExecuteSqlRawAsync(
-                    "UPDATE MatchRounds SET IsDeleted = 1 WHERE LeagueNumber = {0}", leagueId);
+                    "UPDATE \"MatchRounds\" SET \"IsDeleted\" = TRUE WHERE \"LeagueNumber\" = {0}", leagueId);
                 await dbContext.Database.ExecuteSqlRawAsync(
-                    "UPDATE Players SET IsDeleted = 1 WHERE LeagueNumber = {0}", leagueId);
+                    "UPDATE \"Players\" SET \"IsDeleted\" = TRUE WHERE \"LeagueNumber\" = {0}", leagueId);
 
                 await _unitOfWork.SaveChangesAsync();
                 await transaction.CommitAsync();
@@ -81,7 +81,7 @@ namespace YuGiTournament.Api.Services
 
                 league.IsDeleted = true;
 
-                 _unitOfWork.GetRepository<LeagueId>().Update(league);
+                _unitOfWork.GetRepository<LeagueId>().Update(league);
                 await _unitOfWork.SaveChangesAsync();
                 await transaction.CommitAsync();
             }

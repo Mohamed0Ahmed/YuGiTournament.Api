@@ -163,7 +163,7 @@ namespace YuGiTournament.Api.Services
                 SenderFullName = "Admin",
                 SenderPhoneNumber = admin.PhoneNumber ?? "N/A", 
                 Content = content,
-                IsRead = false,
+                IsRead = true,
                 IsFromAdmin = true,
                 SentAt = DateTime.UtcNow
             };

@@ -1,0 +1,24 @@
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.5.2.0
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "YuGiTournament.Api", "YuGiTournament.Api.csproj", "{74ED6FB7-F092-60FC-1176-0ADF38246151}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{74ED6FB7-F092-60FC-1176-0ADF38246151}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{74ED6FB7-F092-60FC-1176-0ADF38246151}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{74ED6FB7-F092-60FC-1176-0ADF38246151}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{74ED6FB7-F092-60FC-1176-0ADF38246151}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {68964382-276E-498B-83F1-931344B4805F}
+	EndGlobalSection
+EndGlobal

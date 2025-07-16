@@ -13,12 +13,14 @@ namespace YuGiTournament.Api.Services
         private readonly IUnitOfWork _unitOfWork;
         private readonly ILogger<MatchService> _logger;
         private readonly int _maxRoundsPerMatch;
+        private readonly IPlayerRankingService _playerRankingService;
 
-        public MatchService(IUnitOfWork unitOfWork, ILogger<MatchService> logger, IConfiguration configuration)
+        public MatchService(IUnitOfWork unitOfWork, ILogger<MatchService> logger, IConfiguration configuration, IPlayerRankingService playerRankingService)
         {
             _unitOfWork = unitOfWork;
             _logger = logger;
             _maxRoundsPerMatch = configuration.GetValue<int>("GameRules:MaxRoundsPerMatch");
+            _playerRankingService = playerRankingService;
         }
 
         public async Task<IEnumerable<MatchViewModel>> GetAllMatchesAsync()
@@ -139,7 +141,12 @@ namespace YuGiTournament.Api.Services
                 player2.UpdateStats();
 
                 await _unitOfWork.SaveChangesAsync();
-                await _unitOfWork.GetDbContext().Database.ExecuteSqlRawAsync("EXEC UpdatePlayersRanking");
+                var leaguePlayers = await _unitOfWork.GetRepository<Player>().GetAll().Where(p => p.LeagueNumber == match.LeagueNumber).ToListAsync();
+                var leagueMatches = await _unitOfWork.GetRepository<Match>().GetAll().Where(m => m.LeagueNumber == match.LeagueNumber).ToListAsync();
+                var rankedPlayers = _playerRankingService.RankPlayers(leaguePlayers, leagueMatches);
+                foreach (var p in rankedPlayers) { var dbPlayer = leaguePlayers.First(x => x.PlayerId == p.PlayerId); dbPlayer.Rank = p.Rank; }
+                await _unitOfWork.SaveChangesAsync();
+
                 await transaction.CommitAsync();
 
                 return new ApiResponse(true, "تم إعادة تعيين الماتش من البداية.");
@@ -242,7 +249,13 @@ namespace YuGiTournament.Api.Services
                 _unitOfWork.GetRepository<Match>().Update(match);
 
                 await _unitOfWork.SaveChangesAsync();
-                await _unitOfWork.GetDbContext().Database.ExecuteSqlRawAsync("EXEC UpdatePlayersRanking");
+                var leaguePlayers = await _unitOfWork.GetRepository<Player>().GetAll().Where(p => p.LeagueNumber == league.Id).ToListAsync();
+                var leagueMatches = await _unitOfWork.GetRepository<Match>().GetAll().Where(m => m.LeagueNumber == league.Id).ToListAsync();
+                var rankedPlayers = _playerRankingService.RankPlayers(leaguePlayers, leagueMatches);
+                foreach (var p in rankedPlayers) { var dbPlayer = leaguePlayers.First(x => x.PlayerId == p.PlayerId); dbPlayer.Rank = p.Rank; }
+                await _unitOfWork.SaveChangesAsync();
+                // لم نعد بحاجة لاستدعاء دالة قاعدة البيانات القديمة التي تعيد احتساب الترتيب
+                // حيث أصبح الترتيب يُحسب حصرياً عبر PlayerRankingService
                 await transaction.CommitAsync();
 
                 return new ApiResponse(true, responseMessage);
