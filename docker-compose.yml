@@ -1,0 +1,7 @@
+services:
+  yugitournament.api:
+    image: ${DOCKER_REGISTRY-}yugitournamentapi
+    build:
+      context: .
+      dockerfile: YuGiTournament.Api/Dockerfile
+    # لا حاجة لـ depends_on بعد حذف postgres
