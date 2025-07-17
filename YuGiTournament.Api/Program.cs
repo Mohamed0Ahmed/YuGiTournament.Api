@@ -129,6 +129,13 @@ namespace YuGiTournament.Api
 
             app.UseAuthentication();
             app.UseAuthorization();
+            
+            // Add a simple endpoint for testing
+            app.MapGet("/", () => new { Message = "YuGi Tournament API is running!", Status = "OK", Timestamp = DateTime.UtcNow });
+            app.MapGet("/api/health", () => new { Status = "Healthy", Timestamp = DateTime.UtcNow });
+            app.MapGet("/test", () => new { Message = "Test endpoint works!", Timestamp = DateTime.UtcNow });
+            app.MapGet("/api/test", () => new { Message = "API test endpoint works!", Timestamp = DateTime.UtcNow });
+            
             app.MapControllers();
 
             #endregion
