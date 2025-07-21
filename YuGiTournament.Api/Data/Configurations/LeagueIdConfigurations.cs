@@ -19,6 +19,7 @@ namespace YuGiTournament.Api.Data.Configurations
             league.Property(p => p.Description).IsRequired();
             league.Property(p => p.Name).IsRequired();
             league.Property(p => p.TypeOfLeague).IsRequired();
+            league.Property(l => l.SystemOfLeague).IsRequired();
 
         }
     }

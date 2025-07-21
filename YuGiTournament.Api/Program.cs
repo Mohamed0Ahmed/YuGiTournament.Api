@@ -129,13 +129,13 @@ namespace YuGiTournament.Api
 
             app.UseAuthentication();
             app.UseAuthorization();
-            
+
             // Add a simple endpoint for testing
             app.MapGet("/", () => new { Message = "YuGi Tournament API is running!", Status = "OK", Timestamp = DateTime.UtcNow });
             app.MapGet("/api/health", () => new { Status = "Healthy", Timestamp = DateTime.UtcNow });
             app.MapGet("/test", () => new { Message = "Test endpoint works!", Timestamp = DateTime.UtcNow });
             app.MapGet("/api/test", () => new { Message = "API test endpoint works!", Timestamp = DateTime.UtcNow });
-            
+
             app.MapControllers();
 
             #endregion
@@ -147,8 +147,8 @@ namespace YuGiTournament.Api
 
         private static async Task SeedAdminUser(UserManager<ApplicationUser> userManager, RoleManager<IdentityRole> roleManager)
         {
-            const string adminEmail = "admin@yugi.com";
-            const string adminPassword = "Admin@1234";
+            const string adminEmail = "a@y.com";
+            const string adminPassword = "123456";
             const string adminRole = "Admin";
             const string playerRole = "Player";
 

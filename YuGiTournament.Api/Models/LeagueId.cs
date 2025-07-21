@@ -9,6 +9,7 @@
         public LeagueType TypeOfLeague { get; set; }
         public bool IsFinished { get; set; }= false;
         public bool IsDeleted { get; set; }= false;
+        public SystemOfLeague SystemOfLeague { get; set; } = SystemOfLeague.Matches;
     }
 
 
@@ -19,5 +20,11 @@
     {
         Single = 0,
         Multi = 1
+    }
+
+    public enum SystemOfLeague
+    {
+        Points = 0,
+        Matches = 1
     }
 }
