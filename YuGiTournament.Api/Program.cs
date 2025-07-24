@@ -21,12 +21,14 @@ namespace YuGiTournament.Api
             #region Configure Services
 
             builder.Services.AddScoped(typeof(IGenericRepository<>), typeof(GenericRepository<>));
-            builder.Services.AddScoped<IMatchService, MatchService>();
+            builder.Services.AddScoped<IPointMatchService, PointMatchService>();
             builder.Services.AddScoped<IPlayerService, PlayerService>();
             builder.Services.AddScoped<ILeagueResetService, LeagueResetService>();
             builder.Services.AddScoped<IMessageService, MessageService>();
             builder.Services.AddScoped<INoteService, NoteService>();
             builder.Services.AddScoped<IPlayerRankingService, PlayerRankingService>();
+            builder.Services.AddScoped<IClassicMatchService, ClassicMatchService>();
+            builder.Services.AddScoped<IMatchServiceSelector, MatchServiceSelector>();
             builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
             builder.Services.AddScoped<IAuthService, AuthService>();
 

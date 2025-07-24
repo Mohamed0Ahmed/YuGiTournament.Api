@@ -9,5 +9,6 @@ namespace YuGiTournament.Api.ApiResponses
         {
             get; set;
         }
-}
+        public SystemOfLeague? SystemOfLeague => League?.SystemOfLeague;
+    }
 }

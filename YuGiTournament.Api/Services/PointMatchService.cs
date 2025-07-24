@@ -8,14 +8,14 @@ using YuGiTournament.Api.Services.Abstractions;
 
 namespace YuGiTournament.Api.Services
 {
-    public class MatchService : IMatchService
+    public class PointMatchService : IPointMatchService
     {
         private readonly IUnitOfWork _unitOfWork;
-        private readonly ILogger<MatchService> _logger;
+        private readonly ILogger<PointMatchService> _logger;
         private readonly int _maxRoundsPerMatch;
         private readonly IPlayerRankingService _playerRankingService;
 
-        public MatchService(IUnitOfWork unitOfWork, ILogger<MatchService> logger, IConfiguration configuration, IPlayerRankingService playerRankingService)
+        public PointMatchService(IUnitOfWork unitOfWork, ILogger<PointMatchService> logger, IConfiguration configuration, IPlayerRankingService playerRankingService)
         {
             _unitOfWork = unitOfWork;
             _logger = logger;
@@ -55,6 +55,7 @@ namespace YuGiTournament.Api.Services
                     LeagueName = league.Name,
                     LeagueDescription = league.Description,
                     LeagueType = league.TypeOfLeague.ToString(),
+                    SystemOfLeague = league.SystemOfLeague.ToString(), // Added
                     IsFinished = league.IsFinished,
                     CreatedOn = league.CreatedOn,
                     Matches = matches

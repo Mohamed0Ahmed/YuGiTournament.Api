@@ -107,6 +107,7 @@ namespace YuGiTournament.Api.Services
                 Description = newLeague.Description,
                 Name = newLeague.Name,
                 TypeOfLeague = newLeague.TypeOfLeague,
+                SystemOfLeague = newLeague.SystemOfLeague, 
                 IsFinished = false
             };
 

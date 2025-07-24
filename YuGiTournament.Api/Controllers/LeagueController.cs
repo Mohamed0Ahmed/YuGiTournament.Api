@@ -40,7 +40,7 @@ namespace YuGiTournament.Api.Controllers
             return Ok(result);
         }
 
-        [Authorize(Roles = "Admin")]
+        //[Authorize(Roles = "Admin")]
         [HttpGet("getCurrentLeague")]
         public async Task<IActionResult> GetCurrentLeague()
         {

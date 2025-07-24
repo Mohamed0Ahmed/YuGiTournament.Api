@@ -7,9 +7,9 @@
         public string Description { get; set; } = string.Empty;
         public DateTime CreatedOn { get; set; } = DateTime.UtcNow;
         public LeagueType TypeOfLeague { get; set; }
-        public bool IsFinished { get; set; }= false;
-        public bool IsDeleted { get; set; }= false;
-        public SystemOfLeague SystemOfLeague { get; set; } = SystemOfLeague.Matches;
+        public bool IsFinished { get; set; } = false;
+        public bool IsDeleted { get; set; } = false;
+        public SystemOfLeague SystemOfLeague { get; set; }
     }
 
 
@@ -25,6 +25,6 @@
     public enum SystemOfLeague
     {
         Points = 0,
-        Matches = 1
+        Classic = 1
     }
 }

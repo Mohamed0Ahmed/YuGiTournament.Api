@@ -48,11 +48,15 @@ namespace YuGiTournament.Api.Services
 
                 var playerMatches = await _unitOfWork.GetRepository<Match>()
                     .GetAll()
-                    .Include(m => m.Rounds)
                     .Include(m => m.Player1)
                     .Include(m => m.Player2)
+                    .Include(m => m.Rounds)
                     .Where(m => m.Player1Id == playerId || m.Player2Id == playerId)
                     .ToListAsync();
+
+                // Get league to check system
+                var league = await _unitOfWork.GetRepository<LeagueId>().Find(l => l.Id == playerToDelete.LeagueNumber).FirstOrDefaultAsync();
+                bool isClassic = league != null && league.SystemOfLeague == SystemOfLeague.Classic;
 
                 foreach (var match in playerMatches)
                 {
@@ -60,24 +64,59 @@ namespace YuGiTournament.Api.Services
                     if (opponent == null)
                         continue;
 
-                    foreach (var round in match.Rounds)
+                    if (isClassic)
                     {
-                        switch (round.WinnerId)
+                        // عكس احتساب النقاط للخصم في نظام Classic فقط إذا كانت المباراة مكتملة
+                        if (match.IsCompleted)
                         {
-                            case var winnerId when winnerId == playerId:
-                                opponent.Losses--;
-                                break;
-                            case var winnerId when winnerId == opponent.PlayerId:
-                                opponent.Wins--;
-                                opponent.Points--;
-                                break;
-                            case null when round.IsDraw:
-                                opponent.Draws--;
-                                opponent.Points -= 0.5;
-                                break;
+                            if (match.Score1 == 1 && match.Score2 == 1)
+                            {
+                                // كانت تعادل
+                                opponent.Draws -= 1;
+                                opponent.Points -= 1;
+                            }
+                            else if (match.Score1 == 3 && match.Score2 == 0 && match.Player1Id != playerId)
+                            {
+                                // الخصم كان هو الفائز
+                                opponent.Wins -= 1;
+                                opponent.Points -= 3;
+                            }
+                            else if (match.Score2 == 3 && match.Score1 == 0 && match.Player2Id != playerId)
+                            {
+                                // الخصم كان هو الفائز
+                                opponent.Wins -= 1;
+                                opponent.Points -= 3;
+                            }
+                            else if ((match.Score1 == 3 && match.Score2 == 0 && match.Player1Id == playerId) || (match.Score2 == 3 && match.Score1 == 0 && match.Player2Id == playerId))
+                            {
+                                // الخصم كان هو الخاسر
+                                opponent.Losses -= 1;
+                            }
+                            opponent.MatchesPlayed -= 1;
+                            opponent.WinRate = opponent.MatchesPlayed > 0 ? (double)opponent.Wins / opponent.MatchesPlayed * 100 : 0;
                         }
                     }
-
+                    else
+                    {
+                        // النظام القديم: اعتمد على MatchRounds
+                        foreach (var round in match.Rounds)
+                        {
+                            switch (round.WinnerId)
+                            {
+                                case var winnerId when winnerId == playerId:
+                                    opponent.Losses--;
+                                    break;
+                                case var winnerId when winnerId == opponent.PlayerId:
+                                    opponent.Wins--;
+                                    opponent.Points--;
+                                    break;
+                                case null when round.IsDraw:
+                                    opponent.Draws--;
+                                    opponent.Points -= 0.5;
+                                    break;
+                            }
+                        }
+                    }
                     opponent.UpdateStats();
                 }
 
@@ -224,6 +263,7 @@ namespace YuGiTournament.Api.Services
                     LeagueName = league.Name,
                     LeagueDescription = league.Description,
                     LeagueType = league.TypeOfLeague,
+                    league.SystemOfLeague,
                     league.IsFinished,
                     league.CreatedOn,
                     Players = players
