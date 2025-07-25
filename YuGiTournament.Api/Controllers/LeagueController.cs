@@ -48,5 +48,28 @@ namespace YuGiTournament.Api.Controllers
             return Ok(result);
         }
 
+        [Authorize(Roles = "Admin")]
+        [HttpPost("{leagueId}/create-groups")]
+        public async Task<IActionResult> CreateGroupsAndMatches(int leagueId)
+        {
+            var result = await _leagueResetService.CreateGroupsAndMatchesAsync(leagueId);
+            if (!result.Success)
+            {
+                return BadRequest(result);
+            }
+            return Ok(result);
+        }
+
+        [Authorize(Roles = "Admin")]
+        [HttpPost("{leagueId}/start-knockouts")]
+        public async Task<IActionResult> StartKnockoutStage(int leagueId)
+        {
+            var result = await _leagueResetService.StartKnockoutStageAsync(leagueId);
+            if (!result.Success)
+            {
+                return BadRequest(result);
+            }
+            return Ok(result);
+        }
     }
 }

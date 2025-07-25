@@ -160,6 +160,15 @@ namespace YuGiTournament.Api.Services
             if (league == null)
                 return new ApiResponse(false, $"لا يوجد دوري حاليا  ");
 
+            // إذا كانت البطولة من نوع مجموعات، أضف اللاعب فقط ولا تنشئ مباريات
+            if (league.TypeOfLeague == LeagueType.Groups)
+            {
+                player.LeagueNumber = league.Id;
+                await _unitOfWork.GetRepository<Player>().AddAsync(player);
+                await _unitOfWork.SaveChangesAsync();
+                return new ApiResponse(true, $"تم اضافة اللاعب {player.FullName} بنجاح في بطولة مجموعات. سيتم توزيع المجموعات وإنشاء المباريات لاحقًا.");
+            }
+
             var ExistPlayer = await _unitOfWork.GetRepository<Player>().Find(x => x.FullName == fullName).Where(p => p.LeagueNumber == league.Id).FirstOrDefaultAsync();
 
             if (ExistPlayer != null)
@@ -231,19 +240,80 @@ namespace YuGiTournament.Api.Services
                 .GetAll().Where(l => !l.IsDeleted)
                 .ToListAsync();
 
-            if (leagues == null || leagues.Count == 0)
+            if (leagues == null || !leagues.Any())
             {
-                return [];
+                return new List<object>();
             }
 
             var result = new List<object>();
             foreach (var league in leagues)
             {
-                var players = await _unitOfWork.GetRepository<Player>()
-                    .GetAll()
-                    .Where(p => p.LeagueNumber == league.Id)
-                    .OrderBy(p => p.Rank)
-                    .Select(p => new
+                var leagueResponse = new
+                {
+                    league.Id,
+                    league.Name,
+                    league.Description,
+                    league.TypeOfLeague,
+                    league.SystemOfLeague,
+                    league.IsFinished,
+                    league.CreatedOn,
+                    Players = league.TypeOfLeague != LeagueType.Groups ? await GetRankedPlayersForLeague(league.Id) : null,
+                    Groups = league.TypeOfLeague == LeagueType.Groups ? await GetGroupedPlayersForLeague(league.Id) : null
+                };
+
+                result.Add(new
+                {
+                    LeagueId = leagueResponse.Id,
+                    LeagueName = leagueResponse.Name,
+                    LeagueDescription = leagueResponse.Description,
+                    LeagueType = leagueResponse.TypeOfLeague,
+                    leagueResponse.SystemOfLeague,
+                    leagueResponse.IsFinished,
+                    leagueResponse.CreatedOn,
+                    leagueResponse.Players,
+                    leagueResponse.Groups
+                });
+            }
+
+            return result;
+        }
+
+        private async Task<object> GetRankedPlayersForLeague(int leagueId)
+        {
+            return await _unitOfWork.GetRepository<Player>()
+                .GetAll()
+                .Where(p => p.LeagueNumber == leagueId)
+                .OrderBy(p => p.Rank)
+                .Select(p => new
+                {
+                    p.PlayerId,
+                    p.FullName,
+                    p.Wins,
+                    p.Losses,
+                    p.Draws,
+                    p.Points,
+                    p.MatchesPlayed,
+                    p.Rank,
+                    p.WinRate
+                })
+                .ToListAsync();
+        }
+
+        private async Task<object> GetGroupedPlayersForLeague(int leagueId)
+        {
+            var players = await _unitOfWork.GetRepository<Player>()
+                .GetAll()
+                .Where(p => p.LeagueNumber == leagueId && p.GroupNumber != null && !p.IsDeleted)
+                .OrderBy(p => p.Rank)
+                .ToListAsync();
+
+            return players
+                .GroupBy(p => p.GroupNumber)
+                .OrderBy(g => g.Key)
+                .Select(g => new
+                {
+                    GroupNumber = g.Key,
+                    Players = g.Select(p => new
                     {
                         p.PlayerId,
                         p.FullName,
@@ -252,25 +322,43 @@ namespace YuGiTournament.Api.Services
                         p.Draws,
                         p.Points,
                         p.MatchesPlayed,
-                        p.Rank,
-                        p.WinRate
-                    })
-                    .ToListAsync();
+                        p.Rank
+                    }).OrderBy(p => p.Rank).ToList()
+                }).ToList();
+        }
 
-                result.Add(new
-                {
-                    LeagueId = league.Id,
-                    LeagueName = league.Name,
-                    LeagueDescription = league.Description,
-                    LeagueType = league.TypeOfLeague,
-                    league.SystemOfLeague,
-                    league.IsFinished,
-                    league.CreatedOn,
-                    Players = players
-                });
+        public async Task<IEnumerable<object>> GetGroupedPlayersAsync(int leagueId)
+        {
+            var players = await _unitOfWork.GetRepository<Player>()
+                .GetAll()
+                .Where(p => p.LeagueNumber == leagueId && p.GroupNumber != null && !p.IsDeleted)
+                .OrderBy(p => p.GroupNumber)
+                .ToListAsync();
+
+            if (!players.Any())
+            {
+                return new List<object>();
             }
 
-            return result;
+            var groupedPlayers = players
+                .GroupBy(p => p.GroupNumber)
+                .Select(g => new
+                {
+                    GroupNumber = g.Key,
+                    Players = g.Select(p => new
+                    {
+                        p.PlayerId,
+                        p.FullName,
+                        p.Wins,
+                        p.Losses,
+                        p.Draws,
+                        p.Points,
+                        p.MatchesPlayed,
+                        p.Rank
+                    }).ToList()
+                });
+
+            return groupedPlayers;
         }
     }
 }

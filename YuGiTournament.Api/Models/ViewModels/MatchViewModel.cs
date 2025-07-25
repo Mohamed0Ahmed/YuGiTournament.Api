@@ -10,5 +10,6 @@
         public string? Player2Name { get; set; }
         public int Player1Id { get; set; }
         public int Player2Id { get; set; }
+        public string TournamentStage { get; set; } = string.Empty;
     }
 }

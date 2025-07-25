@@ -259,6 +259,8 @@ namespace YuGiTournament.Api.Services
                 // حيث أصبح الترتيب يُحسب حصرياً عبر PlayerRankingService
                 await transaction.CommitAsync();
 
+                await CheckAndAdvanceStageAsync(match.LeagueNumber, match.Stage);
+
                 return new ApiResponse(true, responseMessage);
             }
             catch (DbUpdateException ex)
@@ -292,11 +294,58 @@ namespace YuGiTournament.Api.Services
                     Player1Name = m.Player1.FullName,
                     Player2Name = m.Player2.FullName,
                     Player1Id = m.Player1Id,
-                    Player2Id = m.Player2Id
+                    Player2Id = m.Player2Id,
+                    TournamentStage = m.Stage.ToString()
                 })
                 .ToListAsync();
         }
 
+        private async Task CheckAndAdvanceStageAsync(int leagueId, TournamentStage currentStage)
+        {
+            // تحقق من نوع البطولة أولاً
+            var league = await _unitOfWork.GetRepository<LeagueId>()
+                .Find(l => l.Id == leagueId)
+                .FirstOrDefaultAsync();
 
+            if (league == null) return;
+
+            // لا تنشئ مباريات جديدة إلا إذا كانت البطولة من نوع Groups
+            if (league.TypeOfLeague != LeagueType.Groups) return;
+
+            if (currentStage == TournamentStage.Final || currentStage == TournamentStage.GroupStage) return;
+
+            var stageMatches = await _unitOfWork.GetRepository<Match>()
+                .Find(m => m.LeagueNumber == leagueId && m.Stage == currentStage && !m.IsDeleted)
+                .ToListAsync();
+
+            if (stageMatches.Any(m => !m.IsCompleted)) return;
+
+            // في الأدوار الإقصائية، لن يكون هناك تعادل، لذا نفترض أن هناك فائز دائمًا
+            var winners = stageMatches.Select(m => (m.Score1 > m.Score2) ? m.Player1Id : m.Player2Id).ToList();
+            var nextStage = currentStage switch
+            {
+                TournamentStage.QuarterFinals => TournamentStage.SemiFinals,
+                TournamentStage.SemiFinals => TournamentStage.Final,
+                _ => TournamentStage.Final // Should not happen
+            };
+
+            var newMatches = new List<Match>();
+            for (int i = 0; i < winners.Count; i += 2)
+            {
+                newMatches.Add(new Match
+                {
+                    Player1Id = winners[i],
+                    Player2Id = winners[i + 1],
+                    LeagueNumber = leagueId,
+                    Stage = nextStage
+                });
+            }
+
+            if (newMatches.Any())
+            {
+                await _unitOfWork.GetRepository<Match>().AddRangeAsync(newMatches);
+                await _unitOfWork.SaveChangesAsync();
+            }
+        }
     }
 }

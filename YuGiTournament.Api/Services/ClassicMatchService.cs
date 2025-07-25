@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using YuGiTournament.Api.Abstractions;
 using YuGiTournament.Api.ApiResponses;
 using YuGiTournament.Api.DTOs;
+using YuGiTournament.Api.Models;
 using YuGiTournament.Api.Models.ViewModels;
 using YuGiTournament.Api.Services.Abstractions;
 
@@ -226,6 +227,8 @@ namespace YuGiTournament.Api.Services
 
                 await transaction.CommitAsync();
 
+                await CheckAndAdvanceStageAsync(match.LeagueNumber, match.Stage);
+
                 return new ApiResponse(true, responseMessage);
             }
             catch (Exception ex)
@@ -282,9 +285,57 @@ namespace YuGiTournament.Api.Services
                     Player1Name = m.Player1.FullName,
                     Player2Name = m.Player2.FullName,
                     Player1Id = m.Player1Id,
-                    Player2Id = m.Player2Id
+                    Player2Id = m.Player2Id,
+                    TournamentStage = m.Stage.ToString()
                 })
                 .ToListAsync();
+        }
+
+        private async Task CheckAndAdvanceStageAsync(int leagueId, TournamentStage currentStage)
+        {
+            // تحقق من نوع البطولة أولاً
+            var league = await _unitOfWork.GetRepository<Models.LeagueId>()
+                .Find(l => l.Id == leagueId)
+                .FirstOrDefaultAsync();
+
+            if (league == null) return;
+
+            // لا تنشئ مباريات جديدة إلا إذا كانت البطولة من نوع Groups
+            if (league.TypeOfLeague != Models.LeagueType.Groups) return;
+
+            if (currentStage == TournamentStage.Final || currentStage == TournamentStage.GroupStage) return;
+
+            var stageMatches = await _unitOfWork.GetRepository<Models.Match>()
+                .Find(m => m.LeagueNumber == leagueId && m.Stage == currentStage && !m.IsDeleted)
+                .ToListAsync();
+
+            if (stageMatches.Any(m => !m.IsCompleted)) return;
+
+            var winners = stageMatches.Select(m => (m.Score1 > m.Score2) ? m.Player1Id : m.Player2Id).ToList();
+            var nextStage = currentStage switch
+            {
+                TournamentStage.QuarterFinals => TournamentStage.SemiFinals,
+                TournamentStage.SemiFinals => TournamentStage.Final,
+                _ => TournamentStage.Final // Should not happen
+            };
+
+            var newMatches = new List<Models.Match>();
+            for (int i = 0; i < winners.Count; i += 2)
+            {
+                newMatches.Add(new Models.Match
+                {
+                    Player1Id = winners[i],
+                    Player2Id = winners[i + 1],
+                    LeagueNumber = leagueId,
+                    Stage = nextStage
+                });
+            }
+
+            if (newMatches.Any())
+            {
+                await _unitOfWork.GetRepository<Models.Match>().AddRangeAsync(newMatches);
+                await _unitOfWork.SaveChangesAsync();
+            }
         }
     }
 }

@@ -39,7 +39,7 @@ namespace YuGiTournament.Api.Controllers
         {
             // سنستخدم النظام الحالي للدوري النشط فقط
             var league = await _unitOfWork.GetRepository<LeagueId>()
-                .Find(x => x.IsFinished == false)
+                .Find(x => x.IsDeleted == false)
                 .FirstOrDefaultAsync();
             if (league == null)
                 return Ok(new List<object>());

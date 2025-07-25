@@ -53,5 +53,12 @@ namespace YuGiTournament.Api.Controllers
             var result = await _playerService.DeletePlayerAsync(playerId);
             return Ok(result);
         }
+
+        [HttpGet("league/{leagueId}/groups")]
+        public async Task<IActionResult> GetPlayerGroups(int leagueId)
+        {
+            var groups = await _playerService.GetGroupedPlayersAsync(leagueId);
+            return Ok(groups);
+        }
     }
 }

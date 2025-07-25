@@ -19,7 +19,8 @@
     public enum LeagueType
     {
         Single = 0,
-        Multi = 1
+        Multi = 1,
+        Groups = 2
     }
 
     public enum SystemOfLeague

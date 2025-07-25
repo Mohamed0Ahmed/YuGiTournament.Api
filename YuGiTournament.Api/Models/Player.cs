@@ -12,6 +12,7 @@
         public int Rank { get; set; }
 
         public double WinRate { get; set; }
+        public int? GroupNumber { get; set; }
 
 
 
