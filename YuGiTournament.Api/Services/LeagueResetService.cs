@@ -271,8 +271,8 @@ namespace YuGiTournament.Api.Services
             if (quarterFinalMatches.Count != 4 || quarterFinalMatches.Any(m => !m.IsCompleted))
                 return new ApiResponse(false, "يجب أن تكتمل جميع مباريات دور الـ 8 (4 مباريات) أولاً.");
 
-            // Get winners from each match
-            var winners = quarterFinalMatches.Select(m => m.Score1 > m.Score2 ? m.Player1Id : m.Player2Id).ToList();
+            // Get winners from each match using WinnerId
+            var winners = quarterFinalMatches.Select(m => m.WinnerId ?? (m.Score1 > m.Score2 ? m.Player1Id : m.Player2Id)).ToList();
             if (winners.Count != 4)
                 return new ApiResponse(false, "يجب أن يكون هناك 4 فائزين من دور الـ 8.");
 
@@ -318,8 +318,8 @@ namespace YuGiTournament.Api.Services
             if (semiFinalMatches.Count != 2 || semiFinalMatches.Any(m => !m.IsCompleted))
                 return new ApiResponse(false, "يجب أن تكتمل جميع مباريات نصف النهائي (مباراتان) أولاً.");
 
-            // Get winners from each match
-            var winners = semiFinalMatches.Select(m => m.Score1 > m.Score2 ? m.Player1Id : m.Player2Id).ToList();
+            // Get winners from each match using WinnerId
+            var winners = semiFinalMatches.Select(m => m.WinnerId ?? (m.Score1 > m.Score2 ? m.Player1Id : m.Player2Id)).ToList();
             if (winners.Count != 2)
                 return new ApiResponse(false, "يجب أن يكون هناك 2 فائزين من نصف النهائي.");
 

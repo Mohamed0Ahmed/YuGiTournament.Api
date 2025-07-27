@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using YuGiTournament.Api.Data;
@@ -11,9 +12,11 @@ using YuGiTournament.Api.Data;
 namespace YuGiTournament.Api.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250727112135_RemoveDefaultValue")]
+    partial class RemoveDefaultValue
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -262,7 +265,7 @@ namespace YuGiTournament.Api.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("LeagueId", (string)null);
+                    b.ToTable("LeagueId");
                 });
 
             modelBuilder.Entity("YuGiTournament.Api.Models.Match", b =>
@@ -309,7 +312,7 @@ namespace YuGiTournament.Api.Migrations
 
                     b.HasIndex("Player2Id");
 
-                    b.ToTable("Matches", (string)null);
+                    b.ToTable("Matches");
                 });
 
             modelBuilder.Entity("YuGiTournament.Api.Models.MatchRound", b =>
@@ -339,7 +342,7 @@ namespace YuGiTournament.Api.Migrations
 
                     b.HasIndex("MatchId");
 
-                    b.ToTable("MatchRounds", (string)null);
+                    b.ToTable("MatchRounds");
                 });
 
             modelBuilder.Entity("YuGiTournament.Api.Models.Message", b =>
@@ -380,7 +383,7 @@ namespace YuGiTournament.Api.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Messages", (string)null);
+                    b.ToTable("Messages");
                 });
 
             modelBuilder.Entity("YuGiTournament.Api.Models.Note", b =>
@@ -403,7 +406,7 @@ namespace YuGiTournament.Api.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Notes", (string)null);
+                    b.ToTable("Notes");
                 });
 
             modelBuilder.Entity("YuGiTournament.Api.Models.Player", b =>
@@ -463,7 +466,7 @@ namespace YuGiTournament.Api.Migrations
 
                     b.HasKey("PlayerId");
 
-                    b.ToTable("Players", (string)null);
+                    b.ToTable("Players");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>

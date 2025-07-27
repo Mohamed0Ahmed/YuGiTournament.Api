@@ -198,7 +198,8 @@ namespace YuGiTournament.Api.Services
                     Score1 = 0,
                     Score2 = 0,
                     IsCompleted = false,
-                    LeagueNumber = league.Id
+                    LeagueNumber = league.Id,
+                    Stage = TournamentStage.League,
                 });
             }
 

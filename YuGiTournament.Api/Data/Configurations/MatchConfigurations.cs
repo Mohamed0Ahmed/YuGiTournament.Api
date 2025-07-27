@@ -20,7 +20,10 @@ namespace YuGiTournament.Api.Data.Configurations
                     .HasDefaultValue(false);
 
                match.Property(m => m.Stage)
-                    .HasDefaultValue(TournamentStage.GroupStage);
+                    .IsRequired();
+
+               match.Property(m => m.WinnerId)
+                    .IsRequired(false);
 
                match.HasOne(m => m.Player1)
                     .WithMany()

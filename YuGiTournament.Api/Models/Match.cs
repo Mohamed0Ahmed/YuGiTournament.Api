@@ -9,6 +9,7 @@
         public double Score2 { get; set; }
         public bool IsCompleted { get; set; }
         public TournamentStage Stage { get; set; }
+        public int? WinnerId { get; set; }
 
         public Player Player1 { get; set; } = null!;
         public Player Player2 { get; set; } = null!;
@@ -18,10 +19,10 @@
 
     public enum TournamentStage
     {
-        League,         // 0 - القيمة الافتراضية
-        GroupStage,     // 1
-        QuarterFinals,  // 2
-        SemiFinals,     // 3
-        Final           // 4
+        League = 0,
+        GroupStage = 1,
+        QuarterFinals = 2,
+        SemiFinals = 3,
+        Final = 4
     }
 }

@@ -9,39 +9,73 @@ namespace YuGiTournament.Api.Services
     public class PlayerRankingService : IPlayerRankingService
     {
         private const double Tolerance = 1e-6;
+
         public List<Player> RankPlayers(List<Player> players, List<Match> matches)
         {
-            // نسخة من اللاعبين حتى لا نعدل القائمة الأصلية
-            var rankedPlayers = players.Select(p => new Player
+            // إعادة تعيين الرانك للجميع
+            foreach (var player in players)
             {
-                PlayerId = p.PlayerId,
-                FullName = p.FullName,
-                Wins = p.Wins,
-                Losses = p.Losses,
-                Draws = p.Draws,
-                Points = p.Points,
-                MatchesPlayed = p.MatchesPlayed,
-                Rank = 0,
-                WinRate = p.WinRate,
-                LeagueNumber = p.LeagueNumber
-            }).ToList();
+                player.Rank = 0;
+            }
 
+            // تحقق مما إذا كانت البطولة بالمجموعات
+            var hasGroups = players.Any(p => p.GroupNumber.HasValue);
+
+            if (hasGroups)
+            {
+                // حساب الترتيب لكل مجموعة منفصلة
+                return RankPlayersByGroups(players, matches);
+            }
+            else
+            {
+                // حساب الترتيب للبطولة العادية
+                return RankPlayersNormally(players, matches);
+            }
+        }
+
+        private List<Player> RankPlayersByGroups(List<Player> players, List<Match> matches)
+        {
+            var result = new List<Player>();
+
+            // تجميع اللاعبين حسب المجموعات
+            var groupedPlayers = players.GroupBy(p => p.GroupNumber).OrderBy(g => g.Key);
+
+            foreach (var group in groupedPlayers)
+            {
+                var groupPlayers = group.ToList();
+                var groupPlayerIds = groupPlayers.Select(p => p.PlayerId).ToHashSet();
+
+                // فلترة المباريات لتشمل فقط مباريات هذه المجموعة
+                var groupMatches = matches.Where(m =>
+                    groupPlayerIds.Contains(m.Player1Id) &&
+                    groupPlayerIds.Contains(m.Player2Id)).ToList();
+
+                // حساب الترتيب للمجموعة الحالية
+                var rankedGroupPlayers = RankPlayersNormally(groupPlayers, groupMatches);
+                result.AddRange(rankedGroupPlayers);
+            }
+
+            return result;
+        }
+
+        private List<Player> RankPlayersNormally(List<Player> players, List<Match> matches)
+        {
             // ترتيب أولي حسب النقاط تنازليًا
-            rankedPlayers = rankedPlayers.OrderByDescending(p => p.Points).ToList();
+            var sortedPlayers = players.OrderByDescending(p => p.Points).ToList();
 
             int currentRank = 1;
             int i = 0;
-            while (i < rankedPlayers.Count)
+            while (i < sortedPlayers.Count)
             {
                 // حدد مجموعة اللاعبين المتعادلين في النقاط
-                var samePointsGroup = rankedPlayers
+                var samePointsGroup = sortedPlayers
                     .Skip(i)
-                    .TakeWhile(p => p.Points == rankedPlayers[i].Points)
+                    .TakeWhile(p => p.Points == sortedPlayers[i].Points)
                     .ToList();
 
                 if (samePointsGroup.Count == 1)
                 {
-                    rankedPlayers[i].Rank = currentRank;
+                    sortedPlayers[i].Rank = currentRank;
                     currentRank++;
                     i++;
                     continue;
@@ -75,7 +109,7 @@ namespace YuGiTournament.Api.Services
                 {
                     foreach (var player in group)
                     {
-                        rankedPlayers.First(p => p.PlayerId == player.PlayerId).Rank = currentRank;
+                        sortedPlayers.First(p => p.PlayerId == player.PlayerId).Rank = currentRank;
                     }
                     currentRank += group.Count();
                 }
@@ -85,12 +119,12 @@ namespace YuGiTournament.Api.Services
 
             // ترتيب نهائي حسب الرانك
             // تأكد من أن اللاعبين المتعادلين تماماً في النقاط و WinRate يحصلون على نفس الرتبة
-            for (int a = 0; a < rankedPlayers.Count; a++)
+            for (int a = 0; a < sortedPlayers.Count; a++)
             {
-                for (int b = a + 1; b < rankedPlayers.Count; b++)
+                for (int b = a + 1; b < sortedPlayers.Count; b++)
                 {
-                    var p1 = rankedPlayers[a];
-                    var p2 = rankedPlayers[b];
+                    var p1 = sortedPlayers[a];
+                    var p2 = sortedPlayers[b];
 
                     if (Math.Abs(p1.Points - p2.Points) <= Tolerance &&
                         Math.Abs(p1.WinRate - p2.WinRate) <= Tolerance)
@@ -101,7 +135,7 @@ namespace YuGiTournament.Api.Services
                 }
             }
 
-            return rankedPlayers.OrderBy(p => p.Rank).ToList();
+            return sortedPlayers.OrderBy(p => p.Rank).ToList();
         }
 
         private List<Player> RankByHeadToHead(List<Player> players, List<Match> matches)
