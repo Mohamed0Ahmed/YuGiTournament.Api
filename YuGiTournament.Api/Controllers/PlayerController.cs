@@ -46,6 +46,8 @@ namespace YuGiTournament.Api.Controllers
             return Ok(ranking);
         }
 
+
+
         [Authorize(Roles = "Admin")]
         [HttpDelete("{playerId}")]
         public async Task<IActionResult> DeletePlayer(int playerId)

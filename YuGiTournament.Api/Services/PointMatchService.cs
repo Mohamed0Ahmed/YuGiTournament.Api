@@ -92,65 +92,118 @@ namespace YuGiTournament.Api.Services
             {
                 using var transaction = await _unitOfWork.GetDbContext().Database.BeginTransactionAsync();
                 var match = await _unitOfWork.GetRepository<Match>()
-                    .GetAll()
-                    .Include(m => m.Player1)
-                    .Include(m => m.Player2)
-                    .Include(m => m.Rounds)
-                    .FirstOrDefaultAsync(m => m.MatchId == matchId);
+                    .Find(match => match.MatchId == matchId)
+                    .FirstOrDefaultAsync();
 
                 if (match == null)
-                    return new ApiResponse(false, "الماتش ده مش موجود");
+                    return new ApiResponse(false, "No Match Here");
 
-                if (!match.Rounds.Any())
-                    return new ApiResponse(false, "الماتش لسه متلعبش");
+                // التحقق من عدم وجود مراحل أحدث بدأت بالفعل
+                var hasQuarterFinals = await _unitOfWork.GetRepository<Match>()
+                    .Find(m => m.LeagueNumber == match.LeagueNumber && m.Stage == TournamentStage.QuarterFinals && !m.IsDeleted)
+                    .AnyAsync();
 
-                var player1 = match.Player1;
-                var player2 = match.Player2;
+                var hasSemiFinals = await _unitOfWork.GetRepository<Match>()
+                    .Find(m => m.LeagueNumber == match.LeagueNumber && m.Stage == TournamentStage.SemiFinals && !m.IsDeleted)
+                    .AnyAsync();
 
-                if (player1 == null || player2 == null)
-                    return new ApiResponse(false, "اللاعبين غير موجودين");
+                var hasFinal = await _unitOfWork.GetRepository<Match>()
+                    .Find(m => m.LeagueNumber == match.LeagueNumber && m.Stage == TournamentStage.Final && !m.IsDeleted)
+                    .AnyAsync();
 
-                foreach (var round in match.Rounds)
+                // منع إعادة تعيين مباريات مرحلة المجموعات إذا بدأ دور الـ 8
+                if (match.Stage == TournamentStage.GroupStage && hasQuarterFinals)
                 {
-                    switch (round.WinnerId)
-                    {
-                        case var winnerId when winnerId == player1.PlayerId:
-                            player1.Wins--;
-                            player1.Points--;
-                            player2.Losses--;
-                            break;
-                        case var winnerId when winnerId == player2.PlayerId:
-                            player2.Wins--;
-                            player2.Points--;
-                            player1.Losses--;
-                            break;
-                        case null when round.IsDraw:
-                            player1.Draws--;
-                            player2.Draws--;
-                            player1.Points -= 0.5;
-                            player2.Points -= 0.5;
-                            break;
-                    }
+                    return new ApiResponse(false, "لا يمكن إعادة تعيين مباراة في مرحلة المجموعات بعد بدء دور الـ 8");
                 }
 
-                _unitOfWork.GetRepository<MatchRound>().DeleteRange(match.Rounds);
-                match.Score1 = 0;
-                match.Score2 = 0;
-                match.IsCompleted = false;
+                // منع إعادة تعيين مباريات دور الـ 8 إذا بدأ نصف النهائي
+                if (match.Stage == TournamentStage.QuarterFinals && hasSemiFinals)
+                {
+                    return new ApiResponse(false, "لا يمكن إعادة تعيين مباراة في دور الـ 8 بعد بدء نصف النهائي");
+                }
 
-                player1.UpdateStats();
-                player2.UpdateStats();
+                // منع إعادة تعيين مباريات نصف النهائي إذا بدأ النهائي
+                if (match.Stage == TournamentStage.SemiFinals && hasFinal)
+                {
+                    return new ApiResponse(false, "لا يمكن إعادة تعيين مباراة في نصف النهائي بعد بدء النهائي");
+                }
 
-                await _unitOfWork.SaveChangesAsync();
-                var leaguePlayers = await _unitOfWork.GetRepository<Player>().GetAll().Where(p => p.LeagueNumber == match.LeagueNumber).ToListAsync();
-                var leagueMatches = await _unitOfWork.GetRepository<Match>().GetAll().Where(m => m.LeagueNumber == match.LeagueNumber).ToListAsync();
-                var rankedPlayers = _playerRankingService.RankPlayers(leaguePlayers, leagueMatches);
-                foreach (var p in rankedPlayers) { var dbPlayer = leaguePlayers.First(x => x.PlayerId == p.PlayerId); dbPlayer.Rank = p.Rank; }
-                await _unitOfWork.SaveChangesAsync();
+                // تحقق مما إذا كانت المباراة في دور إقصائي
+                var isKnockoutStage = match.Stage == TournamentStage.QuarterFinals ||
+                                     match.Stage == TournamentStage.SemiFinals ||
+                                     match.Stage == TournamentStage.Final;
 
-                await transaction.CommitAsync();
+                if (isKnockoutStage)
+                {
+                    // في الأدوار الإقصائية، فقط أزل WinnerId وأعد تعيين النتيجة
+                    match.WinnerId = null;
+                    match.Score1 = 0;
+                    match.Score2 = 0;
+                    match.IsCompleted = false;
 
-                return new ApiResponse(true, "تم إعادة تعيين الماتش من البداية.");
+                    _unitOfWork.GetRepository<Match>().Update(match);
+                    await _unitOfWork.SaveChangesAsync();
+                    await transaction.CommitAsync();
+
+                    return new ApiResponse(true, "تم إعادة تعيين المباراة الإقصائية بنجاح.");
+                }
+                else
+                {
+                    // في مرحلة المجموعات، استخدم النظام العادي
+                    var player1 = await _unitOfWork.GetRepository<Player>()
+                        .Find(player => player.PlayerId == match.Player1Id)
+                        .FirstOrDefaultAsync();
+                    var player2 = await _unitOfWork.GetRepository<Player>()
+                        .Find(player => player.PlayerId == match.Player2Id)
+                        .FirstOrDefaultAsync();
+
+                    if (player1 == null || player2 == null)
+                        return new ApiResponse(false, "All Players Must Be There");
+
+                    // عكس احتساب النقاط بناءً على النتيجة السابقة
+                    foreach (var round in match.Rounds)
+                    {
+                        switch (round.WinnerId)
+                        {
+                            case var winnerId when winnerId == player1.PlayerId:
+                                player1.Wins--;
+                                player1.Points--;
+                                player2.Losses--;
+                                break;
+                            case var winnerId when winnerId == player2.PlayerId:
+                                player2.Wins--;
+                                player2.Points--;
+                                player1.Losses--;
+                                break;
+                            case null when round.IsDraw:
+                                player1.Draws--;
+                                player2.Draws--;
+                                player1.Points -= 0.5;
+                                player2.Points -= 0.5;
+                                break;
+                        }
+                    }
+
+                    _unitOfWork.GetRepository<MatchRound>().DeleteRange(match.Rounds);
+                    match.Score1 = 0;
+                    match.Score2 = 0;
+                    match.IsCompleted = false;
+
+                    player1.UpdateStats();
+                    player2.UpdateStats();
+
+                    await _unitOfWork.SaveChangesAsync();
+                    var leaguePlayers = await _unitOfWork.GetRepository<Player>().GetAll().Where(p => p.LeagueNumber == match.LeagueNumber).ToListAsync();
+                    var leagueMatches = await _unitOfWork.GetRepository<Match>().GetAll().Where(m => m.LeagueNumber == match.LeagueNumber).ToListAsync();
+                    var rankedPlayers = _playerRankingService.RankPlayers(leaguePlayers, leagueMatches);
+                    foreach (var p in rankedPlayers) { var dbPlayer = leaguePlayers.First(x => x.PlayerId == p.PlayerId); dbPlayer.Rank = p.Rank; }
+                    await _unitOfWork.SaveChangesAsync();
+
+                    await transaction.CommitAsync();
+
+                    return new ApiResponse(true, "تم إعادة تعيين الماتش من البداية.");
+                }
             }
             catch (DbUpdateException ex)
             {
@@ -233,7 +286,6 @@ namespace YuGiTournament.Api.Services
                         await _unitOfWork.SaveChangesAsync();
                         await transaction.CommitAsync();
 
-                        await CheckAndAdvanceStageAsync(match.LeagueNumber, match.Stage);
 
                         return new ApiResponse(true, $"تم تسجيل فوز {winner.FullName} في {match.Stage}");
                     }
@@ -307,7 +359,6 @@ namespace YuGiTournament.Api.Services
 
                     await transaction.CommitAsync();
 
-                    await CheckAndAdvanceStageAsync(match.LeagueNumber, match.Stage);
 
                     return new ApiResponse(true, responseMessage);
                 }
@@ -349,52 +400,6 @@ namespace YuGiTournament.Api.Services
                 .ToListAsync();
         }
 
-        private async Task CheckAndAdvanceStageAsync(int leagueId, TournamentStage currentStage)
-        {
-            // تحقق من نوع البطولة أولاً
-            var league = await _unitOfWork.GetRepository<LeagueId>()
-                .Find(l => l.Id == leagueId)
-                .FirstOrDefaultAsync();
 
-            if (league == null) return;
-
-            // لا تنشئ مباريات جديدة إلا إذا كانت البطولة من نوع Groups
-            if (league.TypeOfLeague != LeagueType.Groups) return;
-
-            if (currentStage == TournamentStage.Final || currentStage == TournamentStage.GroupStage) return;
-
-            var stageMatches = await _unitOfWork.GetRepository<Match>()
-                .Find(m => m.LeagueNumber == leagueId && m.Stage == currentStage && !m.IsDeleted)
-                .ToListAsync();
-
-            if (stageMatches.Any(m => !m.IsCompleted)) return;
-
-            // في الأدوار الإقصائية، نستخدم WinnerId لتحديد الفائزين
-            var winners = stageMatches.Select(m => m.WinnerId ?? (m.Score1 > m.Score2 ? m.Player1Id : m.Player2Id)).ToList();
-            var nextStage = currentStage switch
-            {
-                TournamentStage.QuarterFinals => TournamentStage.SemiFinals,
-                TournamentStage.SemiFinals => TournamentStage.Final,
-                _ => TournamentStage.Final // Should not happen
-            };
-
-            var newMatches = new List<Match>();
-            for (int i = 0; i < winners.Count; i += 2)
-            {
-                newMatches.Add(new Match
-                {
-                    Player1Id = winners[i],
-                    Player2Id = winners[i + 1],
-                    LeagueNumber = leagueId,
-                    Stage = nextStage
-                });
-            }
-
-            if (newMatches.Any())
-            {
-                await _unitOfWork.GetRepository<Match>().AddRangeAsync(newMatches);
-                await _unitOfWork.SaveChangesAsync();
-            }
-        }
     }
 }

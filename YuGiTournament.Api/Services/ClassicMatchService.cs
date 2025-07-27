@@ -58,83 +58,138 @@ namespace YuGiTournament.Api.Services
             try
             {
                 using var transaction = await _unitOfWork.GetDbContext().Database.BeginTransactionAsync();
-                var match = await _unitOfWork.GetRepository<Models.Match>()
+                var match = await _unitOfWork.GetRepository<Match>()
                     .GetAll()
                     .Include(m => m.Player1)
                     .Include(m => m.Player2)
+                    .Include(m => m.Rounds)
                     .FirstOrDefaultAsync(m => m.MatchId == matchId);
 
                 if (match == null)
-                    return new ApiResponse(false, "المباراة غير موجودة");
+                    return new ApiResponse(false, "الماتش ده مش موجود");
 
-                if (!match.IsCompleted)
-                    return new ApiResponse(false, "المباراة لم تُلعب بعد");
+                // التحقق من عدم وجود مراحل أحدث بدأت بالفعل
+                var hasQuarterFinals = await _unitOfWork.GetRepository<Match>()
+                    .Find(m => m.LeagueNumber == match.LeagueNumber && m.Stage == TournamentStage.QuarterFinals && !m.IsDeleted)
+                    .AnyAsync();
 
-                var player1 = match.Player1;
-                var player2 = match.Player2;
+                var hasSemiFinals = await _unitOfWork.GetRepository<Match>()
+                    .Find(m => m.LeagueNumber == match.LeagueNumber && m.Stage == TournamentStage.SemiFinals && !m.IsDeleted)
+                    .AnyAsync();
 
-                if (player1 == null || player2 == null)
-                    return new ApiResponse(false, "اللاعبين غير موجودين");
+                var hasFinal = await _unitOfWork.GetRepository<Match>()
+                    .Find(m => m.LeagueNumber == match.LeagueNumber && m.Stage == TournamentStage.Final && !m.IsDeleted)
+                    .AnyAsync();
 
-                // عكس احتساب النقاط بناءً على النتيجة السابقة
-                if (match.Score1 == 1 && match.Score2 == 1)
+                // منع إعادة تعيين مباريات مرحلة المجموعات إذا بدأ دور الـ 8
+                if (match.Stage == TournamentStage.GroupStage && hasQuarterFinals)
                 {
-                    // كانت تعادل
-                    player1.Draws -= 1;
-                    player2.Draws -= 1;
-                    player1.Points -= 1;
-                    player2.Points -= 1;
+                    return new ApiResponse(false, "لا يمكن إعادة تعيين مباراة في مرحلة المجموعات بعد بدء دور الـ 8");
                 }
-                else if (match.Score1 == 3 && match.Score2 == 0)
+
+                // منع إعادة تعيين مباريات دور الـ 8 إذا بدأ نصف النهائي
+                if (match.Stage == TournamentStage.QuarterFinals && hasSemiFinals)
                 {
-                    // فاز اللاعب 1
-                    player1.Wins -= 1;
-                    player1.Points -= 3;
-                    player2.Losses -= 1;
+                    return new ApiResponse(false, "لا يمكن إعادة تعيين مباراة في دور الـ 8 بعد بدء نصف النهائي");
                 }
-                else if (match.Score2 == 3 && match.Score1 == 0)
+
+                // منع إعادة تعيين مباريات نصف النهائي إذا بدأ النهائي
+                if (match.Stage == TournamentStage.SemiFinals && hasFinal)
                 {
-                    // فاز اللاعب 2
-                    player2.Wins -= 1;
-                    player2.Points -= 3;
-                    player1.Losses -= 1;
+                    return new ApiResponse(false, "لا يمكن إعادة تعيين مباراة في نصف النهائي بعد بدء النهائي");
+                }
+
+                // تحقق مما إذا كانت المباراة في دور إقصائي
+                var isKnockoutStage = match.Stage == TournamentStage.QuarterFinals ||
+                                     match.Stage == TournamentStage.SemiFinals ||
+                                     match.Stage == TournamentStage.Final;
+
+                if (isKnockoutStage)
+                {
+                    // في الأدوار الإقصائية، فقط أزل WinnerId وأعد تعيين النتيجة
+                    match.WinnerId = null;
+                    match.Score1 = 0;
+                    match.Score2 = 0;
+                    match.IsCompleted = false;
+
+                    _unitOfWork.GetRepository<Match>().Update(match);
+                    await _unitOfWork.SaveChangesAsync();
+                    await transaction.CommitAsync();
+
+                    return new ApiResponse(true, "تم إعادة تعيين المباراة الإقصائية بنجاح.");
                 }
                 else
                 {
-                    return new ApiResponse(false, "نتيجة المباراة غير معروفة أو لم يتم احتسابها بنظام الكلاسيك");
+                    // في مرحلة المجموعات، استخدم النظام العادي
+                    if (!match.Rounds.Any())
+                        return new ApiResponse(false, "الماتش لسه متلعبش");
+
+                    var player1 = match.Player1;
+                    var player2 = match.Player2;
+
+                    if (player1 == null || player2 == null)
+                        return new ApiResponse(false, "اللاعبين غير موجودين");
+
+                    // عكس احتساب النقاط بناءً على النتيجة السابقة
+                    if (match.Score1 == 1 && match.Score2 == 1)
+                    {
+                        // كانت تعادل
+                        player1.Draws -= 1;
+                        player2.Draws -= 1;
+                        player1.Points -= 1;
+                        player2.Points -= 1;
+                    }
+                    else if (match.Score1 == 3 && match.Score2 == 0)
+                    {
+                        // فاز اللاعب 1
+                        player1.Wins -= 1;
+                        player1.Points -= 3;
+                        player2.Losses -= 1;
+                    }
+                    else if (match.Score2 == 3 && match.Score1 == 0)
+                    {
+                        // فاز اللاعب 2
+                        player2.Wins -= 1;
+                        player2.Points -= 3;
+                        player1.Losses -= 1;
+                    }
+                    else
+                    {
+                        return new ApiResponse(false, "نتيجة المباراة غير معروفة أو لم يتم احتسابها بنظام الكلاسيك");
+                    }
+
+                    player1.MatchesPlayed -= 1;
+                    player2.MatchesPlayed -= 1;
+                    player1.WinRate = player1.MatchesPlayed > 0 ? (double)player1.Wins / player1.MatchesPlayed * 100 : 0;
+                    player2.WinRate = player2.MatchesPlayed > 0 ? (double)player2.Wins / player2.MatchesPlayed * 100 : 0;
+
+                    match.Score1 = 0;
+                    match.Score2 = 0;
+                    match.IsCompleted = false;
+
+                    _unitOfWork.GetRepository<Player>().Update(player1);
+                    _unitOfWork.GetRepository<Player>().Update(player2);
+                    _unitOfWork.GetRepository<Match>().Update(match);
+
+                    await _unitOfWork.SaveChangesAsync();
+
+                    // تحديث ترتيب اللاعبين
+                    var leaguePlayers = await _unitOfWork.GetRepository<Player>()
+                        .GetAll().Where(p => p.LeagueNumber == match.LeagueNumber).ToListAsync();
+                    var leagueMatches = await _unitOfWork.GetRepository<Match>()
+                        .GetAll().Where(m => m.LeagueNumber == match.LeagueNumber).ToListAsync();
+                    var rankedPlayers = _playerRankingService.RankPlayers(leaguePlayers, leagueMatches);
+                    foreach (var p in rankedPlayers)
+                    {
+                        var dbPlayer = leaguePlayers.First(x => x.PlayerId == p.PlayerId);
+                        dbPlayer.Rank = p.Rank;
+                    }
+                    await _unitOfWork.SaveChangesAsync();
+
+                    await transaction.CommitAsync();
+
+                    return new ApiResponse(true, "تم إعادة تعيين نتيجة المباراة بنجاح");
                 }
-
-                player1.MatchesPlayed -= 1;
-                player2.MatchesPlayed -= 1;
-                player1.WinRate = player1.MatchesPlayed > 0 ? (double)player1.Wins / player1.MatchesPlayed * 100 : 0;
-                player2.WinRate = player2.MatchesPlayed > 0 ? (double)player2.Wins / player2.MatchesPlayed * 100 : 0;
-
-                match.Score1 = 0;
-                match.Score2 = 0;
-                match.IsCompleted = false;
-
-                _unitOfWork.GetRepository<Models.Player>().Update(player1);
-                _unitOfWork.GetRepository<Models.Player>().Update(player2);
-                _unitOfWork.GetRepository<Models.Match>().Update(match);
-
-                await _unitOfWork.SaveChangesAsync();
-
-                // تحديث ترتيب اللاعبين
-                var leaguePlayers = await _unitOfWork.GetRepository<Models.Player>()
-                    .GetAll().Where(p => p.LeagueNumber == match.LeagueNumber).ToListAsync();
-                var leagueMatches = await _unitOfWork.GetRepository<Models.Match>()
-                    .GetAll().Where(m => m.LeagueNumber == match.LeagueNumber).ToListAsync();
-                var rankedPlayers = _playerRankingService.RankPlayers(leaguePlayers, leagueMatches);
-                foreach (var p in rankedPlayers)
-                {
-                    var dbPlayer = leaguePlayers.First(x => x.PlayerId == p.PlayerId);
-                    dbPlayer.Rank = p.Rank;
-                }
-                await _unitOfWork.SaveChangesAsync();
-
-                await transaction.CommitAsync();
-
-                return new ApiResponse(true, "تم إعادة تعيين نتيجة المباراة بنجاح");
             }
             catch (Exception ex)
             {
@@ -151,7 +206,7 @@ namespace YuGiTournament.Api.Services
             try
             {
                 using var transaction = await _unitOfWork.GetDbContext().Database.BeginTransactionAsync();
-                var match = await _unitOfWork.GetRepository<Models.Match>()
+                var match = await _unitOfWork.GetRepository<Match>()
                     .GetAll()
                     .Include(m => m.Player1)
                     .Include(m => m.Player2)
@@ -202,11 +257,10 @@ namespace YuGiTournament.Api.Services
                             match.Score2 = 3;
                         }
 
-                        _unitOfWork.GetRepository<Models.Match>().Update(match);
+                        _unitOfWork.GetRepository<Match>().Update(match);
                         await _unitOfWork.SaveChangesAsync();
                         await transaction.CommitAsync();
 
-                        await CheckAndAdvanceStageAsync(match.LeagueNumber, match.Stage);
 
                         return new ApiResponse(true, $"تم تسجيل فوز {winner.FullName} في {match.Stage}");
                     }
@@ -255,16 +309,16 @@ namespace YuGiTournament.Api.Services
 
                     match.IsCompleted = true;
 
-                    _unitOfWork.GetRepository<Models.Player>().Update(player1);
-                    _unitOfWork.GetRepository<Models.Player>().Update(player2);
-                    _unitOfWork.GetRepository<Models.Match>().Update(match);
+                    _unitOfWork.GetRepository<Player>().Update(player1);
+                    _unitOfWork.GetRepository<Player>().Update(player2);
+                    _unitOfWork.GetRepository<Match>().Update(match);
 
                     await _unitOfWork.SaveChangesAsync();
 
                     // تحديث ترتيب اللاعبين
-                    var leaguePlayers = await _unitOfWork.GetRepository<Models.Player>()
+                    var leaguePlayers = await _unitOfWork.GetRepository<Player>()
                         .GetAll().Where(p => p.LeagueNumber == match.LeagueNumber).ToListAsync();
-                    var leagueMatches = await _unitOfWork.GetRepository<Models.Match>()
+                    var leagueMatches = await _unitOfWork.GetRepository<Match>()
                         .GetAll().Where(m => m.LeagueNumber == match.LeagueNumber).ToListAsync();
                     var rankedPlayers = _playerRankingService.RankPlayers(leaguePlayers, leagueMatches);
                     foreach (var p in rankedPlayers)
@@ -276,7 +330,6 @@ namespace YuGiTournament.Api.Services
 
                     await transaction.CommitAsync();
 
-                    await CheckAndAdvanceStageAsync(match.LeagueNumber, match.Stage);
 
                     return new ApiResponse(true, responseMessage);
                 }
@@ -290,9 +343,9 @@ namespace YuGiTournament.Api.Services
 
         public async Task<IEnumerable<LeagueWithMatchesViewModel>> GetAllLeaguesWithMatchesAsync()
         {
-            var leagues = await _unitOfWork.GetRepository<Models.LeagueId>()
+            var leagues = await _unitOfWork.GetRepository<LeagueId>()
                 .GetAll()
-                .Where(l => !l.IsDeleted && l.SystemOfLeague == Models.SystemOfLeague.Classic)
+                .Where(l => !l.IsDeleted && l.SystemOfLeague == SystemOfLeague.Classic)
                 .ToListAsync();
 
             if (leagues == null || leagues.Count == 0)
@@ -321,7 +374,7 @@ namespace YuGiTournament.Api.Services
         // Helper method
         private async Task<List<MatchViewModel>> GetMatchesByLeagueAsync(int leagueId)
         {
-            return await _unitOfWork.GetRepository<Models.Match>()
+            return await _unitOfWork.GetRepository<Match>()
                 .GetAll()
                 .Include(m => m.Player1)
                 .Include(m => m.Player2)
@@ -341,52 +394,6 @@ namespace YuGiTournament.Api.Services
                 .ToListAsync();
         }
 
-        private async Task CheckAndAdvanceStageAsync(int leagueId, TournamentStage currentStage)
-        {
-            // تحقق من نوع البطولة أولاً
-            var league = await _unitOfWork.GetRepository<Models.LeagueId>()
-                .Find(l => l.Id == leagueId)
-                .FirstOrDefaultAsync();
 
-            if (league == null) return;
-
-            // لا تنشئ مباريات جديدة إلا إذا كانت البطولة من نوع Groups
-            if (league.TypeOfLeague != Models.LeagueType.Groups) return;
-
-            if (currentStage == TournamentStage.Final || currentStage == TournamentStage.GroupStage) return;
-
-            var stageMatches = await _unitOfWork.GetRepository<Models.Match>()
-                .Find(m => m.LeagueNumber == leagueId && m.Stage == currentStage && !m.IsDeleted)
-                .ToListAsync();
-
-            if (stageMatches.Any(m => !m.IsCompleted)) return;
-
-            // في الأدوار الإقصائية، نستخدم WinnerId لتحديد الفائزين
-            var winners = stageMatches.Select(m => m.WinnerId ?? (m.Score1 > m.Score2 ? m.Player1Id : m.Player2Id)).ToList();
-            var nextStage = currentStage switch
-            {
-                TournamentStage.QuarterFinals => TournamentStage.SemiFinals,
-                TournamentStage.SemiFinals => TournamentStage.Final,
-                _ => TournamentStage.Final // Should not happen
-            };
-
-            var newMatches = new List<Models.Match>();
-            for (int i = 0; i < winners.Count; i += 2)
-            {
-                newMatches.Add(new Models.Match
-                {
-                    Player1Id = winners[i],
-                    Player2Id = winners[i + 1],
-                    LeagueNumber = leagueId,
-                    Stage = nextStage
-                });
-            }
-
-            if (newMatches.Any())
-            {
-                await _unitOfWork.GetRepository<Models.Match>().AddRangeAsync(newMatches);
-                await _unitOfWork.SaveChangesAsync();
-            }
-        }
     }
 }

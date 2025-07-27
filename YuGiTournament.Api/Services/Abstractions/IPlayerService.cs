@@ -1,4 +1,5 @@
 ﻿using YuGiTournament.Api.ApiResponses;
+using YuGiTournament.Api.DTOs;
 using YuGiTournament.Api.Models;
 
 namespace YuGiTournament.Api.Services.Abstractions
@@ -10,7 +11,7 @@ namespace YuGiTournament.Api.Services.Abstractions
         Task<ApiResponse> AddPlayerAsync(string NamePlayer);
         Task<ApiResponse> DeletePlayerAsync(int playerId);
         Task<IEnumerable<Player>> GetPlayersRankingAsync();
-        Task<IEnumerable<object>> GetAllLeaguesWithRankAsync();
-        Task<IEnumerable<object>> GetGroupedPlayersAsync(int leagueId);
+        Task<IEnumerable<LeagueResponseDto>> GetAllLeaguesWithRankAsync();
+        Task<IEnumerable<GroupDto>> GetGroupedPlayersAsync(int leagueId);
     }
 }

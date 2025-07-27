@@ -1,0 +1,350 @@
+{
+    "info": {
+        "name": "YuGi Tournament API",
+        "description": "API لإدارة بطولات YuGi Oh",
+        "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+    },
+    "variable": [
+        {
+            "key": "baseUrl",
+            "value": "http://localhost:5000/api",
+            "type": "string"
+        },
+        {
+            "key": "token",
+            "value": "",
+            "type": "string"
+        }
+    ],
+    "auth": {
+        "type": "bearer",
+        "bearer": [
+            {
+                "key": "token",
+                "value": "{{token}}",
+                "type": "string"
+            }
+        ]
+    },
+    "item": [
+        {
+            "name": "Authentication",
+            "item": [
+                {
+                    "name": "Login",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"fullName\": \"أحمد محمد\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/Auth/login",
+                            "host": ["{{baseUrl}}"],
+                            "path": ["Auth", "login"]
+                        }
+                    }
+                },
+                {
+                    "name": "Register",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"fullName\": \"محمد علي\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/Auth/register",
+                            "host": ["{{baseUrl}}"],
+                            "path": ["Auth", "register"]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Players",
+            "item": [
+                {
+                    "name": "Get All Players",
+                    "request": {
+                        "method": "GET",
+                        "url": {
+                            "raw": "{{baseUrl}}/Player",
+                            "host": ["{{baseUrl}}"],
+                            "path": ["Player"]
+                        }
+                    }
+                },
+                {
+                    "name": "Get Players Ranking",
+                    "request": {
+                        "method": "GET",
+                        "url": {
+                            "raw": "{{baseUrl}}/Player/ranking",
+                            "host": ["{{baseUrl}}"],
+                            "path": ["Player", "ranking"]
+                        }
+                    }
+                },
+                {
+                    "name": "Get All Leagues with Rank",
+                    "request": {
+                        "method": "GET",
+                        "url": {
+                            "raw": "{{baseUrl}}/Player/players/all",
+                            "host": ["{{baseUrl}}"],
+                            "path": ["Player", "players", "all"]
+                        }
+                    }
+                },
+
+                {
+                    "name": "Add Player",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"fullName\": \"علي أحمد\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/Player",
+                            "host": ["{{baseUrl}}"],
+                            "path": ["Player"]
+                        }
+                    }
+                },
+                {
+                    "name": "Delete Player",
+                    "request": {
+                        "method": "DELETE",
+                        "url": {
+                            "raw": "{{baseUrl}}/Player/1",
+                            "host": ["{{baseUrl}}"],
+                            "path": ["Player", "1"]
+                        }
+                    }
+                },
+                {
+                    "name": "Get Player Groups",
+                    "request": {
+                        "method": "GET",
+                        "url": {
+                            "raw": "{{baseUrl}}/Player/league/1/groups",
+                            "host": ["{{baseUrl}}"],
+                            "path": ["Player", "league", "1", "groups"]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Leagues",
+            "item": [
+                {
+                    "name": "Start League",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"name\": \"بطولة الربيع 2024\",\n  \"description\": \"بطولة ربيعية جديدة\",\n  \"typeOfLeague\": 0,\n  \"systemOfLeague\": 0\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/League/start",
+                            "host": ["{{baseUrl}}"],
+                            "path": ["League", "start"]
+                        }
+                    }
+                },
+                {
+                    "name": "Finish League",
+                    "request": {
+                        "method": "POST",
+                        "url": {
+                            "raw": "{{baseUrl}}/League/1/finish",
+                            "host": ["{{baseUrl}}"],
+                            "path": ["League", "1", "finish"]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Matches",
+            "item": [
+                {
+                    "name": "Get All Matches",
+                    "request": {
+                        "method": "GET",
+                        "url": {
+                            "raw": "{{baseUrl}}/Match",
+                            "host": ["{{baseUrl}}"],
+                            "path": ["Match"]
+                        }
+                    }
+                },
+                {
+                    "name": "Submit Match Result",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"matchId\": 1,\n  \"score1\": 3,\n  \"score2\": 0\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/Match/result",
+                            "host": ["{{baseUrl}}"],
+                            "path": ["Match", "result"]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Messages",
+            "item": [
+                {
+                    "name": "Get Messages",
+                    "request": {
+                        "method": "GET",
+                        "url": {
+                            "raw": "{{baseUrl}}/Message",
+                            "host": ["{{baseUrl}}"],
+                            "path": ["Message"]
+                        }
+                    }
+                },
+                {
+                    "name": "Send Message",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"receiverId\": 2,\n  \"content\": \"مرحبا! هل تريد لعب مباراة؟\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/Message/send",
+                            "host": ["{{baseUrl}}"],
+                            "path": ["Message", "send"]
+                        }
+                    }
+                },
+                {
+                    "name": "Mark Message as Read",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"messageId\": 1\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/Message/mark-read",
+                            "host": ["{{baseUrl}}"],
+                            "path": ["Message", "mark-read"]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Notes",
+            "item": [
+                {
+                    "name": "Get Notes",
+                    "request": {
+                        "method": "GET",
+                        "url": {
+                            "raw": "{{baseUrl}}/Note",
+                            "host": ["{{baseUrl}}"],
+                            "path": ["Note"]
+                        }
+                    }
+                },
+                {
+                    "name": "Add Note",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"content\": \"ملاحظة مهمة للاعبين\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/Note",
+                            "host": ["{{baseUrl}}"],
+                            "path": ["Note"]
+                        }
+                    }
+                },
+                {
+                    "name": "Hide Note",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"noteId\": 1\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/Note/hide",
+                            "host": ["{{baseUrl}}"],
+                            "path": ["Note", "hide"]
+                        }
+                    }
+                }
+            ]
+        }
+    ]
+}

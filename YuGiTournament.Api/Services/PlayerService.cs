@@ -1,6 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using YuGiTournament.Api.Abstractions;
 using YuGiTournament.Api.ApiResponses;
+using YuGiTournament.Api.DTOs;
 using YuGiTournament.Api.Models;
 using YuGiTournament.Api.Services.Abstractions;
 
@@ -235,7 +236,7 @@ namespace YuGiTournament.Api.Services
             return players;
         }
 
-        public async Task<IEnumerable<object>> GetAllLeaguesWithRankAsync()
+        public async Task<IEnumerable<LeagueResponseDto>> GetAllLeaguesWithRankAsync()
         {
             var leagues = await _unitOfWork.GetRepository<LeagueId>()
                 .GetAll().Where(l => !l.IsDeleted)
@@ -243,64 +244,57 @@ namespace YuGiTournament.Api.Services
 
             if (leagues == null || !leagues.Any())
             {
-                return new List<object>();
+                return new List<LeagueResponseDto>();
             }
 
-            var result = new List<object>();
+            var result = new List<LeagueResponseDto>();
             foreach (var league in leagues)
             {
-                var leagueResponse = new
+                var leagueResponse = new LeagueResponseDto
                 {
-                    league.Id,
-                    league.Name,
-                    league.Description,
-                    league.TypeOfLeague,
-                    league.SystemOfLeague,
-                    league.IsFinished,
-                    league.CreatedOn,
+                    LeagueId = league.Id,
+                    LeagueName = league.Name,
+                    LeagueDescription = league.Description,
+                    LeagueType = league.TypeOfLeague,
+                    SystemOfLeague = league.SystemOfLeague,
+                    IsFinished = league.IsFinished,
+                    CreatedOn = league.CreatedOn,
                     Players = league.TypeOfLeague != LeagueType.Groups ? await GetRankedPlayersForLeague(league.Id) : null,
-                    Groups = league.TypeOfLeague == LeagueType.Groups ? await GetGroupedPlayersForLeague(league.Id) : null
+                    Groups = league.TypeOfLeague == LeagueType.Groups ? await GetGroupedPlayersForLeague(league.Id) : null,
+                    Matches = league.TypeOfLeague != LeagueType.Groups ? await GetMatchesForLeague(league.Id) : null,
+                    KnockoutMatches = league.TypeOfLeague == LeagueType.Groups ? await GetKnockoutMatchesForLeague(league.Id) : null
                 };
 
-                result.Add(new
-                {
-                    LeagueId = leagueResponse.Id,
-                    LeagueName = leagueResponse.Name,
-                    LeagueDescription = leagueResponse.Description,
-                    LeagueType = leagueResponse.TypeOfLeague,
-                    leagueResponse.SystemOfLeague,
-                    leagueResponse.IsFinished,
-                    leagueResponse.CreatedOn,
-                    leagueResponse.Players,
-                    leagueResponse.Groups
-                });
+                result.Add(leagueResponse);
             }
 
             return result;
         }
 
-        private async Task<object> GetRankedPlayersForLeague(int leagueId)
+
+
+        private async Task<List<PlayerRankDto>> GetRankedPlayersForLeague(int leagueId)
         {
             return await _unitOfWork.GetRepository<Player>()
                 .GetAll()
                 .Where(p => p.LeagueNumber == leagueId)
                 .OrderBy(p => p.Rank)
-                .Select(p => new
+                .Select(p => new PlayerRankDto
                 {
-                    p.PlayerId,
-                    p.FullName,
-                    p.Wins,
-                    p.Losses,
-                    p.Draws,
-                    p.Points,
-                    p.MatchesPlayed,
-                    p.Rank,
-                    p.WinRate
+                    PlayerId = p.PlayerId,
+                    FullName = p.FullName,
+                    Wins = p.Wins,
+                    Losses = p.Losses,
+                    Draws = p.Draws,
+                    Points = p.Points,
+                    MatchesPlayed = p.MatchesPlayed,
+                    Rank = p.Rank,
+                    WinRate = p.WinRate
                 })
                 .ToListAsync();
         }
 
-        private async Task<object> GetGroupedPlayersForLeague(int leagueId)
+        private async Task<List<GroupDto>> GetGroupedPlayersForLeague(int leagueId)
         {
             var players = await _unitOfWork.GetRepository<Player>()
                 .GetAll()
@@ -308,27 +302,116 @@ namespace YuGiTournament.Api.Services
                 .OrderBy(p => p.Rank)
                 .ToListAsync();
 
-            return players
+            var groups = players
                 .GroupBy(p => p.GroupNumber)
                 .OrderBy(g => g.Key)
-                .Select(g => new
+                .Select(g => new GroupDto
                 {
-                    GroupNumber = g.Key,
-                    Players = g.Select(p => new
+                    GroupNumber = g.Key ?? 0,
+                    Players = g.Select(p => new PlayerRankDto
                     {
-                        p.PlayerId,
-                        p.FullName,
-                        p.Wins,
-                        p.Losses,
-                        p.Draws,
-                        p.Points,
-                        p.MatchesPlayed,
-                        p.Rank
+                        PlayerId = p.PlayerId,
+                        FullName = p.FullName,
+                        Wins = p.Wins,
+                        Losses = p.Losses,
+                        Draws = p.Draws,
+                        Points = p.Points,
+                        MatchesPlayed = p.MatchesPlayed,
+                        Rank = p.Rank,
+                        WinRate = p.WinRate
                     }).OrderBy(p => p.Rank).ToList()
                 }).ToList();
+
+            // إضافة المباريات لكل مجموعة
+            foreach (var group in groups)
+            {
+                group.Matches = await GetGroupMatches(leagueId, group.GroupNumber);
+            }
+
+            return groups;
         }
 
-        public async Task<IEnumerable<object>> GetGroupedPlayersAsync(int leagueId)
+        private async Task<List<MatchDto>> GetMatchesForLeague(int leagueId)
+        {
+            return await _unitOfWork.GetRepository<Match>()
+                .GetAll()
+                .Include(m => m.Player1)
+                .Include(m => m.Player2)
+                .Where(m => m.LeagueNumber == leagueId)
+                .OrderBy(m => m.Stage)
+                .ThenBy(m => m.MatchId)
+                .Select(m => new MatchDto
+                {
+                    MatchId = m.MatchId,
+                    Score1 = m.Score1,
+                    Score2 = m.Score2,
+                    IsCompleted = m.IsCompleted,
+                    Player1Name = m.Player1.FullName,
+                    Player2Name = m.Player2.FullName,
+                    Player1Id = m.Player1Id,
+                    Player2Id = m.Player2Id,
+                    TournamentStage = m.Stage,
+                    WinnerId = m.WinnerId
+                })
+                .ToListAsync();
+        }
+
+        private async Task<List<MatchDto>> GetGroupMatches(int leagueId, int groupNumber)
+        {
+            return await _unitOfWork.GetRepository<Match>()
+                .GetAll()
+                .Include(m => m.Player1)
+                .Include(m => m.Player2)
+                .Where(m => m.LeagueNumber == leagueId &&
+                           m.Stage == TournamentStage.GroupStage &&
+                           ((m.Player1.GroupNumber == groupNumber && m.Player2.GroupNumber == groupNumber) ||
+                            (m.Player1.GroupNumber == groupNumber && m.Player2.GroupNumber == groupNumber)) &&
+                           !m.IsDeleted)
+                .OrderBy(m => m.MatchId)
+                .Select(m => new MatchDto
+                {
+                    MatchId = m.MatchId,
+                    Score1 = m.Score1,
+                    Score2 = m.Score2,
+                    IsCompleted = m.IsCompleted,
+                    Player1Name = m.Player1.FullName,
+                    Player2Name = m.Player2.FullName,
+                    Player1Id = m.Player1Id,
+                    Player2Id = m.Player2Id,
+                    TournamentStage = m.Stage,
+                    WinnerId = m.WinnerId
+                })
+                .ToListAsync();
+        }
+
+        private async Task<List<MatchDto>> GetKnockoutMatchesForLeague(int leagueId)
+        {
+            return await _unitOfWork.GetRepository<Match>()
+                .GetAll()
+                .Include(m => m.Player1)
+                .Include(m => m.Player2)
+                .Where(m => m.LeagueNumber == leagueId &&
+                           m.Stage != TournamentStage.GroupStage &&
+                           !m.IsDeleted)
+                .OrderBy(m => m.Stage)
+                .ThenBy(m => m.MatchId)
+                .Select(m => new MatchDto
+                {
+                    MatchId = m.MatchId,
+                    Score1 = m.Score1,
+                    Score2 = m.Score2,
+                    IsCompleted = m.IsCompleted,
+                    Player1Name = m.Player1.FullName,
+                    Player2Name = m.Player2.FullName,
+                    Player1Id = m.Player1Id,
+                    Player2Id = m.Player2Id,
+                    TournamentStage = m.Stage,
+                    WinnerId = m.WinnerId
+                })
+                .ToListAsync();
+        }
+
+        public async Task<IEnumerable<GroupDto>> GetGroupedPlayersAsync(int leagueId)
         {
             var players = await _unitOfWork.GetRepository<Player>()
                 .GetAll()
@@ -338,24 +421,25 @@ namespace YuGiTournament.Api.Services
 
             if (!players.Any())
             {
-                return new List<object>();
+                return new List<GroupDto>();
             }
 
             var groupedPlayers = players
                 .GroupBy(p => p.GroupNumber)
-                .Select(g => new
+                .Select(g => new GroupDto
                 {
-                    GroupNumber = g.Key,
-                    Players = g.Select(p => new
+                    GroupNumber = g.Key ?? 0,
+                    Players = g.Select(p => new PlayerRankDto
                     {
-                        p.PlayerId,
-                        p.FullName,
-                        p.Wins,
-                        p.Losses,
-                        p.Draws,
-                        p.Points,
-                        p.MatchesPlayed,
-                        p.Rank
+                        PlayerId = p.PlayerId,
+                        FullName = p.FullName,
+                        Wins = p.Wins,
+                        Losses = p.Losses,
+                        Draws = p.Draws,
+                        Points = p.Points,
+                        MatchesPlayed = p.MatchesPlayed,
+                        Rank = p.Rank,
+                        WinRate = p.WinRate
                     }).ToList()
                 });
 

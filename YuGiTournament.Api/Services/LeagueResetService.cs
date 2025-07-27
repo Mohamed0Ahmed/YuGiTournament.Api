@@ -207,8 +207,8 @@ namespace YuGiTournament.Api.Services
             if (allGroupMatches.Any(m => !m.IsCompleted))
                 return new ApiResponse(false, "لا يمكن بدء مرحلة خروج المغلوب قبل انتهاء جميع مباريات المجموعات.");
 
-            // 1. لكل مجموعة (1-4):
-            var qualifiedPlayers = new List<Player>();
+            // 1. لكل مجموعة (1-4): احصل على أول 2 لاعبين
+            var groupWinners = new Dictionary<int, List<Player>>();
             var allPlayers = await _unitOfWork.GetRepository<Player>()
                 .GetAll()
                 .Where(p => p.LeagueNumber == leagueId && !p.IsDeleted && p.GroupNumber != null)
@@ -222,28 +222,48 @@ namespace YuGiTournament.Api.Services
                 var groupPlayerIds = groupPlayers.Select(p => p.PlayerId).ToHashSet();
                 var groupMatches = allGroupMatches.Where(m => groupPlayerIds.Contains(m.Player1Id) && groupPlayerIds.Contains(m.Player2Id)).ToList();
                 var ranked = rankingService.RankPlayers(groupPlayers, groupMatches);
-                qualifiedPlayers.AddRange(ranked.OrderBy(p => p.Rank).Take(2));
+                groupWinners[group] = ranked.OrderBy(p => p.Rank).Take(2).ToList();
             }
 
-            if (qualifiedPlayers.Count != 8)
-                return new ApiResponse(false, "حدث خطأ في تحديد المتأهلين. يجب أن يكون هناك 8 لاعبين متأهلين.");
+            // التحقق من وجود لاعبين كافيين
+            if (groupWinners.Values.Any(g => g.Count != 2))
+                return new ApiResponse(false, "حدث خطأ في تحديد المتأهلين. يجب أن يكون هناك لاعبين من كل مجموعة.");
 
-            // 2. اعمل Shuffle للـ 8 لاعبين
-            var rnd = new Random();
-            var shuffled = qualifiedPlayers.OrderBy(_ => rnd.Next()).ToList();
-
-            // 3. كوّن 4 مباريات (كل مباراة بين اثنين)
-            var quarterFinals = new List<Match>();
-            for (int i = 0; i < 8; i += 2)
+            // 2. إنشاء مباريات دور الـ 8 بنظام التصادم المباشر
+            var quarterFinals = new List<Match>
             {
-                quarterFinals.Add(new Match
-                {
-                    Player1Id = shuffled[i].PlayerId,
-                    Player2Id = shuffled[i + 1].PlayerId,
+                // المباراة 1: الأول من المجموعة 1 vs الثاني من المجموعة 2
+                new() {
+                    Player1Id = groupWinners[1][0].PlayerId, // الأول من المجموعة 1
+                    Player2Id = groupWinners[2][1].PlayerId, // الثاني من المجموعة 2
                     LeagueNumber = leagueId,
                     Stage = TournamentStage.QuarterFinals
-                });
-            }
+                },
+
+                // المباراة 2: الأول من المجموعة 2 vs الثاني من المجموعة 1
+                new() {
+                    Player1Id = groupWinners[2][0].PlayerId, // الأول من المجموعة 2
+                    Player2Id = groupWinners[1][1].PlayerId, // الثاني من المجموعة 1
+                    LeagueNumber = leagueId,
+                    Stage = TournamentStage.QuarterFinals
+                },
+
+                // المباراة 3: الأول من المجموعة 3 vs الثاني من المجموعة 4
+                new() {
+                    Player1Id = groupWinners[3][0].PlayerId, // الأول من المجموعة 3
+                    Player2Id = groupWinners[4][1].PlayerId, // الثاني من المجموعة 4
+                    LeagueNumber = leagueId,
+                    Stage = TournamentStage.QuarterFinals
+                },
+
+                // المباراة 4: الأول من المجموعة 4 vs الثاني من المجموعة 3
+                new() {
+                    Player1Id = groupWinners[4][0].PlayerId, // الأول من المجموعة 4
+                    Player2Id = groupWinners[3][1].PlayerId, // الثاني من المجموعة 3
+                    LeagueNumber = leagueId,
+                    Stage = TournamentStage.QuarterFinals
+                }
+            };
 
             await _unitOfWork.GetRepository<Match>().AddRangeAsync(quarterFinals);
             await _unitOfWork.SaveChangesAsync();
@@ -276,21 +296,51 @@ namespace YuGiTournament.Api.Services
             if (winners.Count != 4)
                 return new ApiResponse(false, "يجب أن يكون هناك 4 فائزين من دور الـ 8.");
 
-            // Shuffle winners for pairing
-            var rnd = new Random();
-            var shuffled = winners.OrderBy(_ => rnd.Next()).ToList();
+            // الحصول على معلومات اللاعبين لمعرفة مجموعاتهم
+            var winnerPlayers = await _unitOfWork.GetRepository<Player>()
+                .Find(p => winners.Contains(p.PlayerId))
+                .ToListAsync();
 
-            var semiFinals = new List<Match>();
-            for (int i = 0; i < 4; i += 2)
+            // تنظيم الفائزين حسب المباريات (المباراة 1 و 3 في جانب، المباراة 2 و 4 في جانب آخر)
+            var side1Winners = new List<int> { winners[0], winners[2] }; // فائز مباراة 1 و 3
+            var side2Winners = new List<int> { winners[1], winners[3] }; // فائز مباراة 2 و 4
+
+            // التحقق من عدم وجود لاعبين من نفس المجموعة في نفس الجانب
+            var side1Players = winnerPlayers.Where(p => side1Winners.Contains(p.PlayerId)).ToList();
+            var side2Players = winnerPlayers.Where(p => side2Winners.Contains(p.PlayerId)).ToList();
+
+            // إذا كان هناك لاعبين من نفس المجموعة في نفس الجانب، نخلط الجانبين
+            var side1Groups = side1Players.Select(p => p.GroupNumber).Distinct().Count();
+            var side2Groups = side2Players.Select(p => p.GroupNumber).Distinct().Count();
+
+            if (side1Groups < 2 || side2Groups < 2)
             {
-                semiFinals.Add(new Match
-                {
-                    Player1Id = shuffled[i],
-                    Player2Id = shuffled[i + 1],
+                // خلط الفائزين لتجنب التقاء لاعبين من نفس المجموعة
+                var rnd = new Random();
+                var shuffled = winners.OrderBy(_ => rnd.Next()).ToList();
+
+                side1Winners = [shuffled[0], shuffled[1]];
+                side2Winners = [shuffled[2], shuffled[3]];
+            }
+
+            var semiFinals = new List<Match>
+            {
+                // المباراة 1: فائز مباراة 1 vs فائز مباراة 3
+                new() {
+                    Player1Id = side1Winners[0],
+                    Player2Id = side1Winners[1],
                     LeagueNumber = leagueId,
                     Stage = TournamentStage.SemiFinals
-                });
-            }
+                },
+
+                // المباراة 2: فائز مباراة 2 vs فائز مباراة 4
+                new() {
+                    Player1Id = side2Winners[0],
+                    Player2Id = side2Winners[1],
+                    LeagueNumber = leagueId,
+                    Stage = TournamentStage.SemiFinals
+                }
+            };
 
             await _unitOfWork.GetRepository<Match>().AddRangeAsync(semiFinals);
             await _unitOfWork.SaveChangesAsync();
