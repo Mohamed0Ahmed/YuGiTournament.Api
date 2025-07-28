@@ -62,7 +62,7 @@ namespace YuGiTournament.Api.Services
                     .GetAll()
                     .Include(m => m.Player1)
                     .Include(m => m.Player2)
-                    .Include(m => m.Rounds)
+                    .Include(m => m.Rounds.Where(r => !r.IsDeleted))
                     .FirstOrDefaultAsync(m => m.MatchId == matchId);
 
                 if (match == null)

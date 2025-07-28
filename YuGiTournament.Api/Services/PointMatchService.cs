@@ -93,6 +93,7 @@ namespace YuGiTournament.Api.Services
                 using var transaction = await _unitOfWork.GetDbContext().Database.BeginTransactionAsync();
                 var match = await _unitOfWork.GetRepository<Match>()
                     .Find(match => match.MatchId == matchId)
+                    .Include(m => m.Rounds.Where(r => !r.IsDeleted))
                     .FirstOrDefaultAsync();
 
                 if (match == null)
@@ -299,7 +300,8 @@ namespace YuGiTournament.Api.Services
                     // في مرحلة المجموعات، نستخدم النظام العادي
                     int matchCount = await _unitOfWork.GetRepository<MatchRound>()
                         .GetAll()
-                        .CountAsync(mr => mr.MatchId == matchId);
+                        .Where(mr => mr.MatchId == matchId && !mr.IsDeleted)
+                        .CountAsync();
 
                     if (matchCount >= _maxRoundsPerMatch)
                         return new ApiResponse(false, $"خلاص بقي هم لعبوا ال {_maxRoundsPerMatch} ماتشات والله");

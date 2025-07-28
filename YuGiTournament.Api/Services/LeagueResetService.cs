@@ -46,15 +46,13 @@ namespace YuGiTournament.Api.Services
 
                 _unitOfWork.GetRepository<LeagueId>().Update(league);
 
-                // await _unitOfWork.GetDbContext().Database.ExecuteSqlRawAsync("DELETE FROM \"Messages\"");
-                // await _unitOfWork.GetDbContext().Database.ExecuteSqlRawAsync("ALTER SEQUENCE \"Messages_Id_seq\" RESTART WITH 1");
-
-                await dbContext.Database.ExecuteSqlRawAsync(
-                    "UPDATE \"Matches\" SET \"IsDeleted\" = TRUE WHERE \"LeagueNumber\" = {0}", leagueId);
-                await dbContext.Database.ExecuteSqlRawAsync(
-                    "UPDATE \"MatchRounds\" SET \"IsDeleted\" = TRUE WHERE \"LeagueNumber\" = {0}", leagueId);
-                await dbContext.Database.ExecuteSqlRawAsync(
-                    "UPDATE \"Players\" SET \"IsDeleted\" = TRUE WHERE \"LeagueNumber\" = {0}", leagueId);
+                // لا نحذف المباريات أو اللاعبين - نتركهم للتاريخ والإحصائيات
+                // await dbContext.Database.ExecuteSqlRawAsync(
+                //     "UPDATE \"Matches\" SET \"IsDeleted\" = TRUE WHERE \"LeagueNumber\" = {0}", leagueId);
+                // await dbContext.Database.ExecuteSqlRawAsync(
+                //     "UPDATE \"MatchRounds\" SET \"IsDeleted\" = TRUE WHERE \"LeagueNumber\" = {0}", leagueId);
+                // await dbContext.Database.ExecuteSqlRawAsync(
+                //     "UPDATE \"Players\" SET \"IsDeleted\" = TRUE WHERE \"LeagueNumber\" = {0}", leagueId);
 
                 await _unitOfWork.SaveChangesAsync();
                 await transaction.CommitAsync();
@@ -207,8 +205,8 @@ namespace YuGiTournament.Api.Services
             if (allGroupMatches.Any(m => !m.IsCompleted))
                 return new ApiResponse(false, "لا يمكن بدء مرحلة خروج المغلوب قبل انتهاء جميع مباريات المجموعات.");
 
-            // 1. لكل مجموعة (1-4): احصل على أول 2 لاعبين
-            var groupWinners = new Dictionary<int, List<Player>>();
+            // 1. لكل مجموعة (1-4): تحقق من إمكانية التأهل
+            var groupQualifiedPlayers = new Dictionary<int, List<Player>>();
             var allPlayers = await _unitOfWork.GetRepository<Player>()
                 .GetAll()
                 .Where(p => p.LeagueNumber == leagueId && !p.IsDeleted && p.GroupNumber != null)
@@ -221,45 +219,49 @@ namespace YuGiTournament.Api.Services
                 var groupPlayers = allPlayers.Where(p => p.GroupNumber == group).ToList();
                 var groupPlayerIds = groupPlayers.Select(p => p.PlayerId).ToHashSet();
                 var groupMatches = allGroupMatches.Where(m => groupPlayerIds.Contains(m.Player1Id) && groupPlayerIds.Contains(m.Player2Id)).ToList();
-                var ranked = rankingService.RankPlayers(groupPlayers, groupMatches);
-                groupWinners[group] = ranked.OrderBy(p => p.Rank).Take(2).ToList();
-            }
+                var ranked = rankingService.RankPlayers(groupPlayers, groupMatches).OrderBy(p => p.Rank).ToList();
 
-            // التحقق من وجود لاعبين كافيين
-            if (groupWinners.Values.Any(g => g.Count != 2))
-                return new ApiResponse(false, "حدث خطأ في تحديد المتأهلين. يجب أن يكون هناك لاعبين من كل مجموعة.");
+                // تحقق من حالات التعادل
+                var qualificationCheck = CheckGroupQualification(ranked, group);
+                if (!qualificationCheck.IsValid)
+                {
+                    return new ApiResponse(false, qualificationCheck.ErrorMessage);
+                }
+
+                groupQualifiedPlayers[group] = qualificationCheck.QualifiedPlayers;
+            }
 
             // 2. إنشاء مباريات دور الـ 8 بنظام التصادم المباشر
             var quarterFinals = new List<Match>
             {
                 // المباراة 1: الأول من المجموعة 1 vs الثاني من المجموعة 2
                 new() {
-                    Player1Id = groupWinners[1][0].PlayerId, // الأول من المجموعة 1
-                    Player2Id = groupWinners[2][1].PlayerId, // الثاني من المجموعة 2
+                    Player1Id = groupQualifiedPlayers[1][0].PlayerId,
+                    Player2Id = groupQualifiedPlayers[2][1].PlayerId,
                     LeagueNumber = leagueId,
                     Stage = TournamentStage.QuarterFinals
                 },
 
                 // المباراة 2: الأول من المجموعة 2 vs الثاني من المجموعة 1
                 new() {
-                    Player1Id = groupWinners[2][0].PlayerId, // الأول من المجموعة 2
-                    Player2Id = groupWinners[1][1].PlayerId, // الثاني من المجموعة 1
+                    Player1Id = groupQualifiedPlayers[2][0].PlayerId,
+                    Player2Id = groupQualifiedPlayers[1][1].PlayerId,
                     LeagueNumber = leagueId,
                     Stage = TournamentStage.QuarterFinals
                 },
 
                 // المباراة 3: الأول من المجموعة 3 vs الثاني من المجموعة 4
                 new() {
-                    Player1Id = groupWinners[3][0].PlayerId, // الأول من المجموعة 3
-                    Player2Id = groupWinners[4][1].PlayerId, // الثاني من المجموعة 4
+                    Player1Id = groupQualifiedPlayers[3][0].PlayerId,
+                    Player2Id = groupQualifiedPlayers[4][1].PlayerId,
                     LeagueNumber = leagueId,
                     Stage = TournamentStage.QuarterFinals
                 },
 
                 // المباراة 4: الأول من المجموعة 4 vs الثاني من المجموعة 3
                 new() {
-                    Player1Id = groupWinners[4][0].PlayerId, // الأول من المجموعة 4
-                    Player2Id = groupWinners[3][1].PlayerId, // الثاني من المجموعة 3
+                    Player1Id = groupQualifiedPlayers[4][0].PlayerId,
+                    Player2Id = groupQualifiedPlayers[3][1].PlayerId,
                     LeagueNumber = leagueId,
                     Stage = TournamentStage.QuarterFinals
                 }
@@ -269,6 +271,47 @@ namespace YuGiTournament.Api.Services
             await _unitOfWork.SaveChangesAsync();
 
             return new ApiResponse(true, "تم إنشاء مباريات دور الـ 8 بنجاح.");
+        }
+
+        private (bool IsValid, List<Player> QualifiedPlayers, string ErrorMessage) CheckGroupQualification(List<Player> rankedPlayers, int groupNumber)
+        {
+            if (rankedPlayers.Count < 2)
+            {
+                return (false, null, $"المجموعة {groupNumber}: عدد اللاعبين غير كافي.")!;
+            }
+
+            // تجميع اللاعبين حسب الرتبة
+            var playersByRank = rankedPlayers.GroupBy(p => p.Rank).OrderBy(g => g.Key).ToList();
+
+            var firstRankPlayers = playersByRank[0].ToList(); // المركز الأول
+            var secondRankPlayers = playersByRank.Count > 1 ? playersByRank[1].ToList() : new List<Player>();
+
+            // الحالة 1: 2 لاعبين في المركز الأول (تعادل) ✅
+            if (firstRankPlayers.Count == 2)
+            {
+                return (true, firstRankPlayers, null)!;
+            }
+
+            // الحالة 2: 1 مركز أول + 1 مركز ثاني ✅
+            if (firstRankPlayers.Count == 1 && secondRankPlayers.Count == 1)
+            {
+                return (true, new List<Player> { firstRankPlayers[0], secondRankPlayers[0] }, null)!;
+            }
+
+            // الحالة 3: 3+ في المركز الأول ❌
+            if (firstRankPlayers.Count >= 3)
+            {
+                return (false, null, $"المجموعة {groupNumber}: يوجد {firstRankPlayers.Count} لاعبين في المركز الأول. يجب كسر التعادل أولاً.")!;
+            }
+
+            // الحالة 4: 1 مركز أول + 2+ مركز ثاني ❌
+            if (firstRankPlayers.Count == 1 && secondRankPlayers.Count >= 2)
+            {
+                return (false, null, $"المجموعة {groupNumber}: يوجد {secondRankPlayers.Count} لاعبين في المركز الثاني. يجب كسر التعادل أولاً.")!;
+            }
+
+            // حالة غير متوقعة
+            return (false, null, $"المجموعة {groupNumber}: حالة غير متوقعة في الترتيب.")!;
         }
 
         public async Task<ApiResponse> StartSemiFinalsAsync(int leagueId)

@@ -11,6 +11,8 @@ namespace YuGiTournament.Api.Services.Abstractions
         Task<ApiResponse> StartLeagueAsync(StartLeagueDto newLeague);
         Task<ApiResponse> CreateGroupsAndMatchesAsync(int leagueId);
         Task<ApiResponse> StartKnockoutStageAsync(int leagueId);
+        Task<ApiResponse> StartSemiFinalsAsync(int leagueId);
+        Task<ApiResponse> StartFinalAsync(int leagueId);
     }
 }
 

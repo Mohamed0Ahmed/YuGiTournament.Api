@@ -118,23 +118,6 @@ namespace YuGiTournament.Api.Services
             }
 
             // ترتيب نهائي حسب الرانك
-            // تأكد من أن اللاعبين المتعادلين تماماً في النقاط و WinRate يحصلون على نفس الرتبة
-            for (int a = 0; a < sortedPlayers.Count; a++)
-            {
-                for (int b = a + 1; b < sortedPlayers.Count; b++)
-                {
-                    var p1 = sortedPlayers[a];
-                    var p2 = sortedPlayers[b];
-
-                    if (Math.Abs(p1.Points - p2.Points) <= Tolerance &&
-                        Math.Abs(p1.WinRate - p2.WinRate) <= Tolerance)
-                    {
-                        var minRank = Math.Min(p1.Rank, p2.Rank);
-                        p1.Rank = p2.Rank = minRank;
-                    }
-                }
-            }
-
             return sortedPlayers.OrderBy(p => p.Rank).ToList();
         }
 

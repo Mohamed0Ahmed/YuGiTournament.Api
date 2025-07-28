@@ -71,5 +71,30 @@ namespace YuGiTournament.Api.Controllers
             }
             return Ok(result);
         }
+
+        [Authorize(Roles = "Admin")]
+        [HttpPost("{leagueId}/start-semifinals")]
+        public async Task<IActionResult> StartSemiFinals(int leagueId)
+        {
+            var result = await _leagueResetService.StartSemiFinalsAsync(leagueId);
+            if (!result.Success)
+            {
+                return BadRequest(result);
+            }
+            return Ok(result);
+        }
+
+        [Authorize(Roles = "Admin")]
+        [HttpPost("{leagueId}/start-final")]
+        public async Task<IActionResult> StartFinal(int leagueId)
+        {
+            var result = await _leagueResetService.StartFinalAsync(leagueId);
+            if (!result.Success)
+            {
+                return BadRequest(result);
+            }
+            return Ok(result);
+        }
+
     }
 }
