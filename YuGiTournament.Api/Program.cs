@@ -31,6 +31,8 @@ namespace YuGiTournament.Api
             builder.Services.AddScoped<IMatchServiceSelector, MatchServiceSelector>();
             builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
             builder.Services.AddScoped<IAuthService, AuthService>();
+            builder.Services.AddScoped<IFriendlyMatchService, FriendlyMatchService>();
+            builder.Services.AddScoped<IFriendlyMessageService, FriendlyMessageService>();
 
             builder.Services.AddDbContext<ApplicationDbContext>(options =>
                 options.UseNpgsql(builder.Configuration.GetConnectionString("YuGiContext")));

@@ -22,5 +22,9 @@ namespace YuGiTournament.Api.Data
         public DbSet<Message> Messages { get; set; }
         public DbSet<Note> Notes { get; set; }
         public DbSet<LeagueId> LeagueId { get; set; }
+        public DbSet<FriendlyPlayer> FriendlyPlayers { get; set; }
+        public DbSet<FriendlyMatch> FriendlyMatches { get; set; }
+        public DbSet<ShutoutResult> ShutoutResults { get; set; }
+        public DbSet<FriendlyMessage> FriendlyMessages { get; set; }
     }
 }

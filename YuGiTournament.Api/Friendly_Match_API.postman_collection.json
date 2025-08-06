@@ -1,0 +1,629 @@
+{
+    "info": {
+        "_postman_id": "friendly-match-api-collection",
+        "name": "YuGi Tournament - Friendly Match API",
+        "description": "Postman Collection for testing Friendly Match API endpoints",
+        "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+    },
+    "item": [
+        {
+            "name": "Authentication",
+            "item": [
+                {
+                    "name": "Login as Admin",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"fullName\": \"a@y.com\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/api/Auth/login",
+                            "host": ["{{baseUrl}}"],
+                            "path": ["api", "Auth", "login"]
+                        }
+                    },
+                    "response": []
+                }
+            ]
+        },
+        {
+            "name": "Player Management",
+            "item": [
+                {
+                    "name": "Get All Friendly Players",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{jwtToken}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{baseUrl}}/api/FriendlyMatch/players",
+                            "host": ["{{baseUrl}}"],
+                            "path": ["api", "FriendlyMatch", "players"]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Get Friendly Player by ID",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{jwtToken}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{baseUrl}}/api/FriendlyMatch/players/1",
+                            "host": ["{{baseUrl}}"],
+                            "path": ["api", "FriendlyMatch", "players", "1"]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Add Friendly Player",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{jwtToken}}"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"fullName\": \"محمد\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/api/FriendlyMatch/players",
+                            "host": ["{{baseUrl}}"],
+                            "path": ["api", "FriendlyMatch", "players"]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Add Another Player",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{jwtToken}}"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"fullName\": \"هشام\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/api/FriendlyMatch/players",
+                            "host": ["{{baseUrl}}"],
+                            "path": ["api", "FriendlyMatch", "players"]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Get Players Ranking",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{jwtToken}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{baseUrl}}/api/FriendlyMatch/players/ranking",
+                            "host": ["{{baseUrl}}"],
+                            "path": [
+                                "api",
+                                "FriendlyMatch",
+                                "players",
+                                "ranking"
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Get Player Stats",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{jwtToken}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{baseUrl}}/api/FriendlyMatch/players/1/stats",
+                            "host": ["{{baseUrl}}"],
+                            "path": [
+                                "api",
+                                "FriendlyMatch",
+                                "players",
+                                "1",
+                                "stats"
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Deactivate Player",
+                    "request": {
+                        "method": "PUT",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{jwtToken}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{baseUrl}}/api/FriendlyMatch/players/1/deactivate",
+                            "host": ["{{baseUrl}}"],
+                            "path": [
+                                "api",
+                                "FriendlyMatch",
+                                "players",
+                                "1",
+                                "deactivate"
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Delete Player",
+                    "request": {
+                        "method": "DELETE",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{jwtToken}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{baseUrl}}/api/FriendlyMatch/players/1",
+                            "host": ["{{baseUrl}}"],
+                            "path": ["api", "FriendlyMatch", "players", "1"]
+                        }
+                    },
+                    "response": []
+                }
+            ]
+        },
+        {
+            "name": "Match Management",
+            "item": [
+                {
+                    "name": "Get All Friendly Matches",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{jwtToken}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{baseUrl}}/api/FriendlyMatch/matches",
+                            "host": ["{{baseUrl}}"],
+                            "path": ["api", "FriendlyMatch", "matches"]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Record Friendly Match - محمد 4-1 هشام",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{jwtToken}}"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"player1Id\": 1,\n  \"player2Id\": 2,\n  \"player1Score\": 4,\n  \"player2Score\": 1\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/api/FriendlyMatch/matches/record",
+                            "host": ["{{baseUrl}}"],
+                            "path": [
+                                "api",
+                                "FriendlyMatch",
+                                "matches",
+                                "record"
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Record Friendly Match - محمد 2-3 هشام",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{jwtToken}}"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"player1Id\": 1,\n  \"player2Id\": 2,\n  \"player1Score\": 2,\n  \"player2Score\": 3\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/api/FriendlyMatch/matches/record",
+                            "host": ["{{baseUrl}}"],
+                            "path": [
+                                "api",
+                                "FriendlyMatch",
+                                "matches",
+                                "record"
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Record Multiple Matches - محمد يكسب 4 مرات 5-0",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{jwtToken}}"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"player1Id\": 1,\n  \"player2Id\": 2,\n  \"player1Score\": 5,\n  \"player2Score\": 0\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/api/FriendlyMatch/matches/record",
+                            "host": ["{{baseUrl}}"],
+                            "path": [
+                                "api",
+                                "FriendlyMatch",
+                                "matches",
+                                "record"
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Record Multiple Matches - هشام يكسب 6 مرات 6-3",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{jwtToken}}"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"player1Id\": 1,\n  \"player2Id\": 2,\n  \"player1Score\": 3,\n  \"player2Score\": 6\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/api/FriendlyMatch/matches/record",
+                            "host": ["{{baseUrl}}"],
+                            "path": [
+                                "api",
+                                "FriendlyMatch",
+                                "matches",
+                                "record"
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Record Shutout Match - محمد 5-0 هشام",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{jwtToken}}"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"player1Id\": 1,\n  \"player2Id\": 2,\n  \"player1Score\": 5,\n  \"player2Score\": 0\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/api/FriendlyMatch/matches/record",
+                            "host": ["{{baseUrl}}"],
+                            "path": [
+                                "api",
+                                "FriendlyMatch",
+                                "matches",
+                                "record"
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Get Matches Between Players",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{jwtToken}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{baseUrl}}/api/FriendlyMatch/matches/1/2",
+                            "host": ["{{baseUrl}}"],
+                            "path": [
+                                "api",
+                                "FriendlyMatch",
+                                "matches",
+                                "1",
+                                "2"
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Update Match",
+                    "request": {
+                        "method": "PUT",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{jwtToken}}"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"player1Id\": 1,\n  \"player2Id\": 2,\n  \"player1Score\": 5,\n  \"player2Score\": 2\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/api/FriendlyMatch/matches/1",
+                            "host": ["{{baseUrl}}"],
+                            "path": ["api", "FriendlyMatch", "matches", "1"]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Delete Match",
+                    "request": {
+                        "method": "DELETE",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{jwtToken}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{baseUrl}}/api/FriendlyMatch/matches/1",
+                            "host": ["{{baseUrl}}"],
+                            "path": ["api", "FriendlyMatch", "matches", "1"]
+                        }
+                    },
+                    "response": []
+                }
+            ]
+        },
+        {
+            "name": "Statistics and Analysis",
+            "item": [
+                {
+                    "name": "Get Overall Score Between Players",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{jwtToken}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{baseUrl}}/api/FriendlyMatch/overall-score/1/2",
+                            "host": ["{{baseUrl}}"],
+                            "path": [
+                                "api",
+                                "FriendlyMatch",
+                                "overall-score",
+                                "1",
+                                "2"
+                            ]
+                        }
+                    },
+                    "response": []
+                }
+            ]
+        },
+        {
+            "name": "Shutout Results (5-0 matches)",
+            "item": [
+                {
+                    "name": "Get All Shutout Results",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{jwtToken}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{baseUrl}}/api/FriendlyMatch/shutouts",
+                            "host": ["{{baseUrl}}"],
+                            "path": ["api", "FriendlyMatch", "shutouts"]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Get Shutout Results by Player",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{jwtToken}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{baseUrl}}/api/FriendlyMatch/shutouts/player/1",
+                            "host": ["{{baseUrl}}"],
+                            "path": [
+                                "api",
+                                "FriendlyMatch",
+                                "shutouts",
+                                "player",
+                                "1"
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Get Shutout Result by Match",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{jwtToken}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{baseUrl}}/api/FriendlyMatch/shutouts/match/1",
+                            "host": ["{{baseUrl}}"],
+                            "path": [
+                                "api",
+                                "FriendlyMatch",
+                                "shutouts",
+                                "match",
+                                "1"
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Delete Shutout Result",
+                    "request": {
+                        "method": "DELETE",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{jwtToken}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{baseUrl}}/api/FriendlyMatch/shutouts/1",
+                            "host": ["{{baseUrl}}"],
+                            "path": ["api", "FriendlyMatch", "shutouts", "1"]
+                        }
+                    },
+                    "response": []
+                }
+            ]
+        },
+        {
+            "name": "Test",
+            "item": [
+                {
+                    "name": "Test Friendly Match API",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/api/FriendlyMatch/test",
+                            "host": ["{{baseUrl}}"],
+                            "path": ["api", "FriendlyMatch", "test"]
+                        }
+                    },
+                    "response": []
+                }
+            ]
+        }
+    ],
+    "event": [
+        {
+            "listen": "prerequest",
+            "script": {
+                "type": "text/javascript",
+                "exec": [""]
+            }
+        },
+        {
+            "listen": "test",
+            "script": {
+                "type": "text/javascript",
+                "exec": [""]
+            }
+        }
+    ],
+    "variable": [
+        {
+            "key": "baseUrl",
+            "value": "https://your-api-url.com",
+            "type": "string"
+        },
+        {
+            "key": "jwtToken",
+            "value": "your-jwt-token-here",
+            "type": "string"
+        }
+    ]
+}
