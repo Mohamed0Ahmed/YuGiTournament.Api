@@ -26,5 +26,9 @@ namespace YuGiTournament.Api.Data
         public DbSet<FriendlyMatch> FriendlyMatches { get; set; }
         public DbSet<ShutoutResult> ShutoutResults { get; set; }
         public DbSet<FriendlyMessage> FriendlyMessages { get; set; }
+        public DbSet<GameRulesConfig> GameRulesConfigs { get; set; }
+        public DbSet<MultiTournament> MultiTournaments { get; set; }
+        public DbSet<MultiTeam> MultiTeams { get; set; }
+        public DbSet<MultiMatch> MultiMatches { get; set; }
     }
 }

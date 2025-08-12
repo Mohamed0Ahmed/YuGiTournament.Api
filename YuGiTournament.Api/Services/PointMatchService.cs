@@ -12,15 +12,15 @@ namespace YuGiTournament.Api.Services
     {
         private readonly IUnitOfWork _unitOfWork;
         private readonly ILogger<PointMatchService> _logger;
-        private readonly int _maxRoundsPerMatch;
+        private readonly IGameRulesService _gameRulesService;
         private readonly IPlayerRankingService _playerRankingService;
 
-        public PointMatchService(IUnitOfWork unitOfWork, ILogger<PointMatchService> logger, IConfiguration configuration, IPlayerRankingService playerRankingService)
+        public PointMatchService(IUnitOfWork unitOfWork, ILogger<PointMatchService> logger, IPlayerRankingService playerRankingService, IGameRulesService gameRulesService)
         {
             _unitOfWork = unitOfWork;
             _logger = logger;
-            _maxRoundsPerMatch = configuration.GetValue<int>("GameRules:MaxRoundsPerMatch");
             _playerRankingService = playerRankingService;
+            _gameRulesService = gameRulesService;
         }
 
         public async Task<IEnumerable<MatchViewModel>> GetAllMatchesAsync()
@@ -303,8 +303,9 @@ namespace YuGiTournament.Api.Services
                         .Where(mr => mr.MatchId == matchId && !mr.IsDeleted)
                         .CountAsync();
 
-                    if (matchCount >= _maxRoundsPerMatch)
-                        return new ApiResponse(false, $"خلاص بقي هم لعبوا ال {_maxRoundsPerMatch} ماتشات والله");
+                    var maxRounds = await _gameRulesService.GetMaxRoundsPerMatchAsync();
+                    if (matchCount >= maxRounds)
+                        return new ApiResponse(false, $"خلاص بقي هم لعبوا ال {maxRounds} ماتشات والله");
 
                     var newRound = new MatchRound
                     {
@@ -344,7 +345,7 @@ namespace YuGiTournament.Api.Services
                     }
 
                     await _unitOfWork.GetRepository<MatchRound>().AddAsync(newRound);
-                    match.IsCompleted = matchCount + 1 == _maxRoundsPerMatch;
+                    match.IsCompleted = matchCount + 1 == maxRounds;
                     player1.UpdateStats();
                     player2.UpdateStats();
 

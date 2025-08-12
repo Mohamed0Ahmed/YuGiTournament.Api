@@ -18,11 +18,11 @@ namespace YuGiTournament.Api.Services
 
         public async Task<ApiResponse> SendMessageToAdminAsync(string playerId, string content)
         {
-            var admin = _unitOfWork.GetRepository<ApplicationUser>().GetAll().FirstOrDefault(u => u.Email == "admin@yugi.com");
-            if (admin == null)
-            {
-                return new ApiResponse(false, "Admin not found.");
-            }
+            //var admin = _unitOfWork.GetRepository<ApplicationUser>().GetAll().FirstOrDefault(u => u.Email == "admin@yugi.com");
+            //if (admin == null)
+            //{
+            //    return new ApiResponse(false, "Admin not found.");
+            //}
 
             var player = await _unitOfWork.GetRepository<ApplicationUser>().GetByIdAsync(playerId);
             if (player == null)

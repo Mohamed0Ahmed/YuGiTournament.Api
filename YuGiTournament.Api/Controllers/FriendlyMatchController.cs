@@ -20,7 +20,6 @@ namespace YuGiTournament.Api.Controllers
         #region Player Management
 
         [HttpGet("players")]
-        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> GetAllFriendlyPlayers()
         {
             var players = await _friendlyMatchService.GetAllFriendlyPlayersAsync();

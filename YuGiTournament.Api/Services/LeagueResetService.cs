@@ -100,6 +100,11 @@ namespace YuGiTournament.Api.Services
             if (existLeague != null)
                 return new ApiResponse(false, $"هناك دوري حالي بالفعل");
 
+            // لو النظام Points لازم roundsPerMatch تكون مُحدّدة وصحيحة
+            if (newLeague.SystemOfLeague == SystemOfLeague.Points && (!newLeague.RoundsPerMatch.HasValue || newLeague.RoundsPerMatch.Value <= 0))
+                return new ApiResponse(false, "عدد الجولات (roundsPerMatch) مطلوب ويجب أن يكون أكبر من صفر لنظام Points.");
+
+
             var league = new LeagueId
             {
                 Description = newLeague.Description,
@@ -114,6 +119,24 @@ namespace YuGiTournament.Api.Services
                 return new ApiResponse(false, $"حدث خطأ اثناء حفظ الدوري");
 
             await _unitOfWork.SaveChangesAsync();
+
+            // لو النظام Points وتم تمرير roundsPerMatch، خزّن القيمة كإعداد ديناميكي
+            if (newLeague.SystemOfLeague == SystemOfLeague.Points && newLeague.RoundsPerMatch.HasValue && newLeague.RoundsPerMatch.Value > 0)
+            {
+                var rulesRepo = _unitOfWork.GetRepository<GameRulesConfig>();
+                var existing = await rulesRepo.GetAll().OrderByDescending(c => c.UpdatedAt).FirstOrDefaultAsync();
+                if (existing == null)
+                {
+                    await rulesRepo.AddAsync(new GameRulesConfig { MaxRoundsPerMatch = newLeague.RoundsPerMatch.Value, UpdatedAt = DateTime.UtcNow });
+                }
+                else
+                {
+                    existing.MaxRoundsPerMatch = newLeague.RoundsPerMatch.Value;
+                    existing.UpdatedAt = DateTime.UtcNow;
+                    rulesRepo.Update(existing);
+                }
+                await _unitOfWork.SaveChangesAsync();
+            }
 
             return new ApiResponse(true, $"تم انشاء الدوري بنجاح");
         }

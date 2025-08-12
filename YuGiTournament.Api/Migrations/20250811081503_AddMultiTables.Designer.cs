@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using YuGiTournament.Api.Data;
@@ -11,9 +12,11 @@ using YuGiTournament.Api.Data;
 namespace YuGiTournament.Api.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250811081503_AddMultiTables")]
+    partial class AddMultiTables
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -547,6 +550,34 @@ namespace YuGiTournament.Api.Migrations
                     b.ToTable("Messages");
                 });
 
+            modelBuilder.Entity("YuGiTournament.Api.Models.MultiFixture", b =>
+                {
+                    b.Property<int>("MultiFixtureId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("MultiFixtureId"));
+
+                    b.Property<int>("MultiTournamentId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("TeamAId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("TeamBId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("MultiFixtureId");
+
+                    b.HasIndex("MultiTournamentId");
+
+                    b.HasIndex("TeamAId");
+
+                    b.HasIndex("TeamBId");
+
+                    b.ToTable("MultiFixtures");
+                });
+
             modelBuilder.Entity("YuGiTournament.Api.Models.MultiMatch", b =>
                 {
                     b.Property<int>("MultiMatchId")
@@ -555,11 +586,11 @@ namespace YuGiTournament.Api.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("MultiMatchId"));
 
-                    b.Property<DateTime?>("CompletedOn")
-                        .HasColumnType("timestamp with time zone");
-
                     b.Property<bool>("IsCompleted")
                         .HasColumnType("boolean");
+
+                    b.Property<int>("MultiFixtureId")
+                        .HasColumnType("integer");
 
                     b.Property<int>("MultiTournamentId")
                         .HasColumnType("integer");
@@ -576,12 +607,6 @@ namespace YuGiTournament.Api.Migrations
                     b.Property<int?>("Score2")
                         .HasColumnType("integer");
 
-                    b.Property<int>("Team1Id")
-                        .HasColumnType("integer");
-
-                    b.Property<int>("Team2Id")
-                        .HasColumnType("integer");
-
                     b.Property<double?>("TotalPoints1")
                         .HasColumnType("double precision");
 
@@ -590,17 +615,13 @@ namespace YuGiTournament.Api.Migrations
 
                     b.HasKey("MultiMatchId");
 
-                    b.HasIndex("MultiTournamentId");
+                    b.HasIndex("MultiFixtureId");
 
                     b.HasIndex("Player1Id");
 
                     b.HasIndex("Player2Id");
 
-                    b.HasIndex("Team1Id");
-
-                    b.HasIndex("Team2Id");
-
-                    b.ToTable("MultiMatches", (string)null);
+                    b.ToTable("MultiMatches");
                 });
 
             modelBuilder.Entity("YuGiTournament.Api.Models.MultiTeam", b =>
@@ -614,39 +635,81 @@ namespace YuGiTournament.Api.Migrations
                     b.Property<DateTime>("CreatedOn")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<int>("Draws")
-                        .HasColumnType("integer");
-
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("boolean");
-
-                    b.Property<int>("Losses")
-                        .HasColumnType("integer");
 
                     b.Property<int>("MultiTournamentId")
                         .HasColumnType("integer");
 
-                    b.Property<string>("PlayerIds")
-                        .IsRequired()
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)");
-
                     b.Property<string>("TeamName")
                         .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
-
-                    b.Property<double>("TotalPoints")
-                        .HasColumnType("double precision");
-
-                    b.Property<int>("Wins")
-                        .HasColumnType("integer");
+                        .HasMaxLength(150)
+                        .HasColumnType("character varying(150)");
 
                     b.HasKey("MultiTeamId");
 
                     b.HasIndex("MultiTournamentId");
 
-                    b.ToTable("MultiTeams", (string)null);
+                    b.ToTable("MultiTeams");
+                });
+
+            modelBuilder.Entity("YuGiTournament.Api.Models.MultiTeamMember", b =>
+                {
+                    b.Property<int>("MultiTeamMemberId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("MultiTeamMemberId"));
+
+                    b.Property<int>("FriendlyPlayerId")
+                        .HasColumnType("integer");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<int>("MultiTeamId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("MultiTeamMemberId");
+
+                    b.HasIndex("FriendlyPlayerId");
+
+                    b.HasIndex("MultiTeamId");
+
+                    b.ToTable("MultiTeamMembers");
+                });
+
+            modelBuilder.Entity("YuGiTournament.Api.Models.MultiTieBreakAward", b =>
+                {
+                    b.Property<int>("MultiTieBreakAwardId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("MultiTieBreakAwardId"));
+
+                    b.Property<DateTime>("AwardedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("MultiTournamentId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("Points")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<int>("WinnerTeamId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("MultiTieBreakAwardId");
+
+                    b.HasIndex("MultiTournamentId");
+
+                    b.HasIndex("WinnerTeamId");
+
+                    b.ToTable("MultiTieBreakAwards");
                 });
 
             modelBuilder.Entity("YuGiTournament.Api.Models.MultiTournament", b =>
@@ -657,16 +720,13 @@ namespace YuGiTournament.Api.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("MultiTournamentId"));
 
-                    b.Property<int?>("ChampionTeamId")
-                        .HasColumnType("integer");
-
                     b.Property<DateTime>("CreatedOn")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<DateTime?>("FinishedOn")
-                        .HasColumnType("timestamp with time zone");
+                    b.Property<bool>("IsFinished")
+                        .HasColumnType("boolean");
 
-                    b.Property<bool>("IsActive")
+                    b.Property<bool>("IsLiveNow")
                         .HasColumnType("boolean");
 
                     b.Property<string>("Name")
@@ -677,25 +737,15 @@ namespace YuGiTournament.Api.Migrations
                     b.Property<int>("PlayersPerTeam")
                         .HasColumnType("integer");
 
-                    b.Property<DateTime?>("StartedOn")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("SystemOfScoring")
-                        .IsRequired()
-                        .HasColumnType("text");
+                    b.Property<int>("SystemOfScoring")
+                        .HasColumnType("integer");
 
                     b.Property<int>("TeamCount")
                         .HasColumnType("integer");
 
                     b.HasKey("MultiTournamentId");
 
-                    b.HasIndex("ChampionTeamId");
-
-                    b.ToTable("MultiTournaments", (string)null);
+                    b.ToTable("MultiTournaments");
                 });
 
             modelBuilder.Entity("YuGiTournament.Api.Models.Note", b =>
@@ -921,11 +971,38 @@ namespace YuGiTournament.Api.Migrations
                     b.Navigation("Match");
                 });
 
-            modelBuilder.Entity("YuGiTournament.Api.Models.MultiMatch", b =>
+            modelBuilder.Entity("YuGiTournament.Api.Models.MultiFixture", b =>
                 {
                     b.HasOne("YuGiTournament.Api.Models.MultiTournament", "Tournament")
-                        .WithMany("Matches")
+                        .WithMany("Fixtures")
                         .HasForeignKey("MultiTournamentId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("YuGiTournament.Api.Models.MultiTeam", "TeamA")
+                        .WithMany()
+                        .HasForeignKey("TeamAId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("YuGiTournament.Api.Models.MultiTeam", "TeamB")
+                        .WithMany()
+                        .HasForeignKey("TeamBId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("TeamA");
+
+                    b.Navigation("TeamB");
+
+                    b.Navigation("Tournament");
+                });
+
+            modelBuilder.Entity("YuGiTournament.Api.Models.MultiMatch", b =>
+                {
+                    b.HasOne("YuGiTournament.Api.Models.MultiFixture", "Fixture")
+                        .WithMany("Matches")
+                        .HasForeignKey("MultiFixtureId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
@@ -941,27 +1018,11 @@ namespace YuGiTournament.Api.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.HasOne("YuGiTournament.Api.Models.MultiTeam", "Team1")
-                        .WithMany("HomeMatches")
-                        .HasForeignKey("Team1Id")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("YuGiTournament.Api.Models.MultiTeam", "Team2")
-                        .WithMany("AwayMatches")
-                        .HasForeignKey("Team2Id")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
+                    b.Navigation("Fixture");
 
                     b.Navigation("Player1");
 
                     b.Navigation("Player2");
-
-                    b.Navigation("Team1");
-
-                    b.Navigation("Team2");
-
-                    b.Navigation("Tournament");
                 });
 
             modelBuilder.Entity("YuGiTournament.Api.Models.MultiTeam", b =>
@@ -975,14 +1036,42 @@ namespace YuGiTournament.Api.Migrations
                     b.Navigation("Tournament");
                 });
 
-            modelBuilder.Entity("YuGiTournament.Api.Models.MultiTournament", b =>
+            modelBuilder.Entity("YuGiTournament.Api.Models.MultiTeamMember", b =>
                 {
-                    b.HasOne("YuGiTournament.Api.Models.MultiTeam", "ChampionTeam")
+                    b.HasOne("YuGiTournament.Api.Models.FriendlyPlayer", "FriendlyPlayer")
                         .WithMany()
-                        .HasForeignKey("ChampionTeamId")
-                        .OnDelete(DeleteBehavior.SetNull);
+                        .HasForeignKey("FriendlyPlayerId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
 
-                    b.Navigation("ChampionTeam");
+                    b.HasOne("YuGiTournament.Api.Models.MultiTeam", "Team")
+                        .WithMany("Members")
+                        .HasForeignKey("MultiTeamId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("FriendlyPlayer");
+
+                    b.Navigation("Team");
+                });
+
+            modelBuilder.Entity("YuGiTournament.Api.Models.MultiTieBreakAward", b =>
+                {
+                    b.HasOne("YuGiTournament.Api.Models.MultiTournament", "Tournament")
+                        .WithMany()
+                        .HasForeignKey("MultiTournamentId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("YuGiTournament.Api.Models.MultiTeam", "WinnerTeam")
+                        .WithMany()
+                        .HasForeignKey("WinnerTeamId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Tournament");
+
+                    b.Navigation("WinnerTeam");
                 });
 
             modelBuilder.Entity("YuGiTournament.Api.Models.ShutoutResult", b =>
@@ -1024,16 +1113,19 @@ namespace YuGiTournament.Api.Migrations
                     b.Navigation("Rounds");
                 });
 
+            modelBuilder.Entity("YuGiTournament.Api.Models.MultiFixture", b =>
+                {
+                    b.Navigation("Matches");
+                });
+
             modelBuilder.Entity("YuGiTournament.Api.Models.MultiTeam", b =>
                 {
-                    b.Navigation("AwayMatches");
-
-                    b.Navigation("HomeMatches");
+                    b.Navigation("Members");
                 });
 
             modelBuilder.Entity("YuGiTournament.Api.Models.MultiTournament", b =>
                 {
-                    b.Navigation("Matches");
+                    b.Navigation("Fixtures");
 
                     b.Navigation("Teams");
                 });

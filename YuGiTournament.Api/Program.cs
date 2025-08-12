@@ -33,6 +33,8 @@ namespace YuGiTournament.Api
             builder.Services.AddScoped<IAuthService, AuthService>();
             builder.Services.AddScoped<IFriendlyMatchService, FriendlyMatchService>();
             builder.Services.AddScoped<IFriendlyMessageService, FriendlyMessageService>();
+            builder.Services.AddScoped<IGameRulesService, GameRulesService>();
+            builder.Services.AddScoped<IMultiTournamentService, MultiTournamentService>();
 
             builder.Services.AddDbContext<ApplicationDbContext>(options =>
                 options.UseNpgsql(builder.Configuration.GetConnectionString("YuGiContext")));
@@ -95,7 +97,12 @@ namespace YuGiTournament.Api
             });
 
             builder.Services.AddAuthorization();
-            builder.Services.AddControllers();
+            builder.Services.AddControllers()
+                .AddJsonOptions(options =>
+                {
+                    options.JsonSerializerOptions.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter());
+                    options.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.Preserve;
+                });
 
             #endregion
 
