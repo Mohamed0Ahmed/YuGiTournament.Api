@@ -1,7 +1,5 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using System.Security.Claims;
-using YuGiTournament.Api.ApiResponses;
 using YuGiTournament.Api.DTOs;
 using YuGiTournament.Api.Services.Abstractions;
 

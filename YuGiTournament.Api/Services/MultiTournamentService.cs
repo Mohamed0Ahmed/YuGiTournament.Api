@@ -46,7 +46,7 @@ namespace YuGiTournament.Api.Services
             await _unitOfWork.GetRepository<MultiTournament>().AddAsync(tournament);
             await _unitOfWork.SaveChangesAsync();
 
-            return new ApiResponse(true, "Tournament created successfully", tournament);
+            return new ApiResponse(true, "Tournament created successfully");
         }
 
         public async Task<ApiResponse> UpdateTournamentStatusAsync(int tournamentId, TournamentStatus status)
@@ -78,6 +78,16 @@ namespace YuGiTournament.Api.Services
                 case TournamentStatus.Finished:
                     if (tournament.Status != TournamentStatus.Started)
                         return new ApiResponse(false, "Can only finish a started tournament");
+
+                    // Find the team with highest points (champion team)
+                    var championTeam = tournament.Teams
+                        .OrderByDescending(t => t.TotalPoints)
+                        .ThenByDescending(t => t.Wins)
+                        .ThenBy(t => t.Losses)
+                        .First();
+
+                    // Set champion team
+                    tournament.ChampionTeamId = championTeam.MultiTeamId;
 
                     // Update player statistics
                     await UpdatePlayerStatisticsAsync(tournament);
@@ -144,13 +154,16 @@ namespace YuGiTournament.Api.Services
             if (playerIds.Count != tournament.PlayersPerTeam)
                 return new ApiResponse(false, $"Team must have exactly {tournament.PlayersPerTeam} players");
 
-            // Check for duplicate team name
-            if (tournament.Teams.Any(t => t.TeamName.Equals(teamName, StringComparison.OrdinalIgnoreCase)))
+            // Check for duplicate team name in current tournament
+            var duplicateName = tournament.Teams
+                .Any(t => t.TeamName.ToLower() == teamName.ToLower());
+
+            if (duplicateName)
                 return new ApiResponse(false, "Team name already exists");
 
             // Check for duplicate players in same tournament
             var existingPlayerIds = tournament.Teams
-                .SelectMany(t => JsonSerializer.Deserialize<List<int>>(t.PlayerIds) ?? new List<int>())
+                .SelectMany(t => SafeDeserializePlayerIds(t.PlayerIds))
                 .ToHashSet();
 
             if (playerIds.Any(p => existingPlayerIds.Contains(p)))
@@ -167,13 +180,7 @@ namespace YuGiTournament.Api.Services
             await _unitOfWork.GetRepository<MultiTeam>().AddAsync(team);
             await _unitOfWork.SaveChangesAsync();
 
-            return new ApiResponse(true, "Team created successfully", new
-            {
-                team.MultiTeamId,
-                team.TeamName,
-                PlayerIds = playerIds,
-                team.CreatedOn
-            });
+            return new ApiResponse(true, "Team created successfully");
         }
 
         public async Task<ApiResponse> UpdateTeamAsync(int teamId, string? teamName, List<int>? playerIds)
@@ -193,7 +200,7 @@ namespace YuGiTournament.Api.Services
             {
                 // Check for duplicate team name
                 var duplicateName = await _unitOfWork.GetRepository<MultiTeam>()
-                    .GetAll()
+                .GetAll()
                     .AnyAsync(t => t.MultiTournamentId == team.MultiTournamentId &&
                                    t.MultiTeamId != teamId &&
                                    t.TeamName.ToLower() == teamName.ToLower());
@@ -216,7 +223,7 @@ namespace YuGiTournament.Api.Services
                     .ToListAsync();
 
                 var existingPlayerIds = otherTeams
-                    .SelectMany(t => JsonSerializer.Deserialize<List<int>>(t.PlayerIds) ?? new List<int>())
+                    .SelectMany(t => SafeDeserializePlayerIds(t.PlayerIds))
                     .ToHashSet();
 
                 if (playerIds.Any(p => existingPlayerIds.Contains(p)))
@@ -244,7 +251,7 @@ namespace YuGiTournament.Api.Services
             if (team.Tournament!.Status != TournamentStatus.Started)
                 return new ApiResponse(false, "Player replacement only allowed after tournament start");
 
-            var currentPlayerIds = JsonSerializer.Deserialize<List<int>>(team.PlayerIds) ?? new List<int>();
+            var currentPlayerIds = SafeDeserializePlayerIds(team.PlayerIds);
 
             if (!currentPlayerIds.Contains(replacedPlayerId))
                 return new ApiResponse(false, "Player not found in team");
@@ -256,7 +263,7 @@ namespace YuGiTournament.Api.Services
                 .ToListAsync();
 
             var allPlayerIds = allTeams
-                .SelectMany(t => JsonSerializer.Deserialize<List<int>>(t.PlayerIds) ?? new List<int>())
+                .SelectMany(t => SafeDeserializePlayerIds(t.PlayerIds))
                 .ToHashSet();
 
             if (allPlayerIds.Contains(newPlayerId))
@@ -272,7 +279,7 @@ namespace YuGiTournament.Api.Services
                 .GetAll()
                 .Where(m => m.MultiTournamentId == team.MultiTournamentId &&
                            !m.IsCompleted &&
-                           (m.Player1Id == replacedPlayerId || m.Player2Id == replacedPlayerId))
+                       (m.Player1Id == replacedPlayerId || m.Player2Id == replacedPlayerId))
                 .ToListAsync();
 
             foreach (var match in matches)
@@ -292,7 +299,7 @@ namespace YuGiTournament.Api.Services
 
         #region Match Management
 
-        public async Task<ApiResponse> RecordMatchResultAsync(int matchId, int? score1, int? score2, double? totalPoints1, double? totalPoints2)
+        public async Task<ApiResponse> RecordMatchResultAsync(int matchId, int? winnerId, double? score1, double? score2)
         {
             var match = await _unitOfWork.GetRepository<MultiMatch>()
                 .GetAll()
@@ -313,30 +320,54 @@ namespace YuGiTournament.Api.Services
             // Validate and set scores based on scoring system
             if (match.Tournament.SystemOfScoring == SystemOfLeague.Classic)
             {
-                if (!score1.HasValue || !score2.HasValue)
-                    return new ApiResponse(false, "Scores required for Classic system");
+                // Classic system: Only winnerId is required
+                if (!winnerId.HasValue)
+                    return new ApiResponse(false, "Winner ID is required for Classic system");
 
-                if (!IsValidClassicScore(score1.Value, score2.Value))
-                    return new ApiResponse(false, "Invalid classic score (must be 3-0, 0-3, or 1-1)");
+                // Validate winnerId is one of the match players
+                if (winnerId != match.Player1Id && winnerId != match.Player2Id)
+                    return new ApiResponse(false, "Winner must be one of the match players");
 
-                match.Score1 = score1;
-                match.Score2 = score2;
-                match.TotalPoints1 = null;
-                match.TotalPoints2 = null;
+                // Set scores: Winner gets 3, Loser gets 0
+                if (winnerId == match.Player1Id)
+                {
+                    match.Score1 = 3;
+                    match.Score2 = 0;
+                }
+                else
+                {
+                    match.Score1 = 0;
+                    match.Score2 = 3;
+                }
+
+                match.WinnerId = winnerId;
             }
             else // Points system
             {
-                if (!totalPoints1.HasValue || !totalPoints2.HasValue)
-                    return new ApiResponse(false, "Total points required for Points system");
+                // Points system: Both scores are required
+                if (!score1.HasValue || !score2.HasValue)
+                    return new ApiResponse(false, "Both scores are required for Points system");
 
-                var maxRounds = await _gameRulesService.GetMaxRoundsPerMatchAsync();
-                if (totalPoints1 < 0 || totalPoints2 < 0 || totalPoints1 + totalPoints2 > maxRounds)
-                    return new ApiResponse(false, "Invalid points total");
+                if (score1.Value < 0 || score2.Value < 0)
+                    return new ApiResponse(false, "Scores cannot be negative");
 
-                match.TotalPoints1 = totalPoints1;
-                match.TotalPoints2 = totalPoints2;
-                match.Score1 = null;
-                match.Score2 = null;
+                // Get max rounds per match from game rules (database or default)
+                var maxRoundsPerMatch = await _gameRulesService.GetMaxRoundsPerMatchAsync();
+
+                // Validate that total scores equal max rounds per match
+                if (score1.Value + score2.Value != maxRoundsPerMatch)
+                    return new ApiResponse(false, $"Total scores ({score1.Value + score2.Value}) must equal max rounds per match ({maxRoundsPerMatch})");
+
+                match.Score1 = score1;
+                match.Score2 = score2;
+
+                // Determine winner automatically
+                if (score1 > score2)
+                    match.WinnerId = match.Player1Id;
+                else if (score2 > score1)
+                    match.WinnerId = match.Player2Id;
+                else
+                    match.WinnerId = null; // Draw
             }
 
             match.IsCompleted = true;
@@ -351,6 +382,110 @@ namespace YuGiTournament.Api.Services
             return new ApiResponse(true, "Match result recorded successfully");
         }
 
+        public async Task<ApiResponse> UndoMatchResultAsync(int matchId)
+        {
+            var match = await _unitOfWork.GetRepository<MultiMatch>()
+                .GetAll()
+                .Include(m => m.Tournament)
+                .Include(m => m.Team1)
+                .Include(m => m.Team2)
+                .FirstOrDefaultAsync(m => m.MultiMatchId == matchId);
+
+            if (match == null)
+                return new ApiResponse(false, "Match not found");
+
+            if (match.Tournament!.Status != TournamentStatus.Started)
+                return new ApiResponse(false, "Cannot undo results for non-started tournament");
+
+            if (!match.IsCompleted)
+                return new ApiResponse(false, "Match is not completed yet");
+
+            // Save old scores for reverting team statistics
+            var oldScore1 = match.Score1 ?? 0;
+            var oldScore2 = match.Score2 ?? 0;
+            var oldWinnerId = match.WinnerId;
+
+            // Reset match to initial state
+            match.Score1 = 0;
+            match.Score2 = 0;
+            match.WinnerId = null;
+            match.IsCompleted = false;
+            match.CompletedOn = null;
+
+            // Revert team statistics
+            await RevertTeamStatisticsAsync(match, oldScore1, oldScore2, oldWinnerId);
+
+            _unitOfWork.GetRepository<MultiMatch>().Update(match);
+            await _unitOfWork.SaveChangesAsync();
+
+            return new ApiResponse(true, "Match result undone successfully");
+        }
+
+        public async Task<ApiResponse> GetPlayerMatchesAsync(int playerId)
+        {
+            // First check if player exists
+            var player = await _unitOfWork.GetRepository<FriendlyPlayer>()
+                .GetAll()
+                .FirstOrDefaultAsync(p => p.PlayerId == playerId);
+
+            if (player == null)
+                return new ApiResponse(false, "Player not found");
+
+            // Get active tournament
+            var activeTournament = await _unitOfWork.GetRepository<MultiTournament>()
+                .GetAll()
+                .FirstOrDefaultAsync(t => t.IsActive);
+
+            if (activeTournament == null)
+                return new ApiResponse(false, "No active tournament found");
+
+            // Get all matches for this player in the active tournament
+            var matches = await _unitOfWork.GetRepository<MultiMatch>()
+                .GetAll()
+                .Where(m => m.MultiTournamentId == activeTournament.MultiTournamentId &&
+                           (m.Player1Id == playerId || m.Player2Id == playerId))
+                .Include(m => m.Player1)
+                .Include(m => m.Player2)
+                .Include(m => m.Team1)
+                .Include(m => m.Team2)
+                .Include(m => m.Winner)
+                .OrderBy(m => m.Team1Id)
+                .ThenBy(m => m.Team2Id)
+                .Select(m => new
+                {
+                    m.MultiMatchId,
+                    m.Player1Id,
+                    Player1Name = m.Player1!.FullName,
+                    m.Player2Id,
+                    Player2Name = m.Player2!.FullName,
+                    m.Team1Id,
+                    Team1Name = m.Team1!.TeamName,
+                    m.Team2Id,
+                    Team2Name = m.Team2!.TeamName,
+                    m.Score1,
+                    m.Score2,
+                    m.WinnerId,
+                    WinnerName = m.Winner != null ? m.Winner.FullName : null,
+                    m.IsCompleted,
+                    m.CompletedOn
+                })
+                .ToListAsync();
+
+            var playerMatchData = new
+            {
+                PlayerId = playerId,
+                PlayerName = player.FullName,
+                TournamentId = activeTournament.MultiTournamentId,
+                TournamentName = activeTournament.Name,
+                TotalMatches = matches.Count,
+                CompletedMatches = matches.Count(m => m.IsCompleted),
+                PendingMatches = matches.Count(m => !m.IsCompleted),
+                Matches = matches
+            };
+
+            return new ApiResponse<object>(true, "Player matches retrieved successfully", playerMatchData);
+        }
+
         #endregion
 
         #region Data Retrieval
@@ -360,12 +495,14 @@ namespace YuGiTournament.Api.Services
             var tournament = await _unitOfWork.GetRepository<MultiTournament>()
                 .GetAll()
                 .Include(t => t.Teams)
+                .Include(t => t.ChampionTeam)
                 .FirstOrDefaultAsync(t => t.IsActive);
 
             if (tournament == null)
                 return new ApiResponse(false, "No active tournament");
 
-            return new ApiResponse(true, "Active tournament found", await BuildTournamentDetailsAsync(tournament));
+            var tournamentData = await BuildTournamentDetailsAsync(tournament);
+            return new ApiResponse<object>(true, "Active tournament found", tournamentData);
         }
 
         public async Task<ApiResponse> GetTournamentByIdAsync(int tournamentId)
@@ -379,7 +516,8 @@ namespace YuGiTournament.Api.Services
             if (tournament == null)
                 return new ApiResponse(false, "Tournament not found");
 
-            return new ApiResponse(true, "Tournament found", await BuildTournamentDetailsAsync(tournament));
+            var tournamentData = await BuildTournamentDetailsAsync(tournament);
+            return new ApiResponse<object>(true, "Tournament found", tournamentData);
         }
 
         public async Task<ApiResponse> GetAllTournamentsAsync()
@@ -397,7 +535,7 @@ namespace YuGiTournament.Api.Services
                 result.Add(await BuildTournamentDetailsAsync(tournament));
             }
 
-            return new ApiResponse(true, "Tournaments retrieved successfully", result);
+            return new ApiResponse<List<object>>(true, "Tournaments retrieved successfully", result);
         }
 
         public async Task<ApiResponse> GetTournamentMatchesAsync(int tournamentId)
@@ -416,6 +554,7 @@ namespace YuGiTournament.Api.Services
                 .Include(m => m.Team2)
                 .Include(m => m.Player1)
                 .Include(m => m.Player2)
+                .Include(m => m.Winner)
                 .OrderBy(m => m.Team1Id)
                 .ThenBy(m => m.Team2Id)
                 .ToListAsync();
@@ -438,15 +577,28 @@ namespace YuGiTournament.Api.Services
                         Player2Name = m.Player2?.FullName ?? $"Player {m.Player2Id}",
                         m.Score1,
                         m.Score2,
-                        m.TotalPoints1,
-                        m.TotalPoints2,
+                        m.WinnerId,
+                        WinnerName = m.Winner?.FullName,
                         m.IsCompleted,
                         m.CompletedOn
                     }).ToList()
                 })
                 .ToList();
 
-            return new ApiResponse(true, "Tournament matches retrieved successfully", fixtureGroups);
+            return new ApiResponse<object>(true, "Tournament matches retrieved successfully", fixtureGroups);
+        }
+
+        public async Task<ApiResponse> GetActiveTournamentMatchesAsync()
+        {
+            var activeTournament = await _unitOfWork.GetRepository<MultiTournament>()
+                .GetAll()
+                .FirstOrDefaultAsync(t => t.IsActive);
+
+            if (activeTournament == null)
+                return new ApiResponse(false, "No active tournament found");
+
+            // Use the existing method to get matches for the active tournament
+            return await GetTournamentMatchesAsync(activeTournament.MultiTournamentId);
         }
 
         public async Task<ApiResponse> GetTournamentStandingsAsync(int tournamentId)
@@ -476,14 +628,100 @@ namespace YuGiTournament.Api.Services
                 })
                 .ToList();
 
-            return new ApiResponse(true, "Tournament standings retrieved successfully", new
+            var standingsData = new
             {
                 TournamentId = tournamentId,
                 TournamentName = tournament.Name,
                 Status = tournament.Status.ToString(),
                 ChampionTeamId = tournament.ChampionTeamId,
                 Standings = standings
-            });
+            };
+
+            return new ApiResponse<object>(true, "Tournament standings retrieved successfully", standingsData);
+        }
+
+        #endregion
+
+        #region Player Management
+
+        public async Task<ApiResponse> GetAllPlayersAsync()
+        {
+            var players = await _unitOfWork.GetRepository<FriendlyPlayer>()
+                .GetAll()
+                .Where(p => p.IsActive)
+                .OrderBy(p => p.FullName)
+                .Select(p => new
+                {
+                    p.PlayerId,
+                    p.FullName,
+                    p.IsActive,
+                    p.CreatedOn,
+                    p.MultiParticipations,
+                    p.MultiTitlesWon
+                })
+                .ToListAsync();
+
+            return new ApiResponse<object>(true, "Players retrieved successfully", players);
+        }
+
+        public async Task<ApiResponse> GetPlayerByIdAsync(int playerId)
+        {
+            var player = await _unitOfWork.GetRepository<FriendlyPlayer>()
+                .GetAll()
+                .Where(p => p.PlayerId == playerId)
+                .Select(p => new
+                {
+                    p.PlayerId,
+                    p.FullName,
+                    p.IsActive,
+                    p.CreatedOn,
+                    p.MultiParticipations,
+                    p.MultiTitlesWon
+                })
+                .FirstOrDefaultAsync();
+
+            if (player == null)
+                return new ApiResponse(false, "Player not found");
+
+            return new ApiResponse<object>(true, "Player found", player);
+        }
+
+        public async Task<ApiResponse> AddPlayerAsync(string fullName)
+        {
+            if (string.IsNullOrWhiteSpace(fullName))
+                return new ApiResponse(false, "Player name is required");
+
+            // Check if player with same name already exists
+            var existingPlayer = await _unitOfWork.GetRepository<FriendlyPlayer>()
+                .GetAll()
+                .FirstOrDefaultAsync(p => p.FullName.ToLower() == fullName.ToLower());
+
+            if (existingPlayer != null)
+                return new ApiResponse(false, "Player with this name already exists");
+
+            var player = new FriendlyPlayer
+            {
+                FullName = fullName,
+                CreatedOn = DateTime.UtcNow,
+                IsActive = true,
+                MultiParticipations = 0,
+                MultiTitlesWon = 0
+            };
+
+            await _unitOfWork.GetRepository<FriendlyPlayer>().AddAsync(player);
+            await _unitOfWork.SaveChangesAsync();
+
+            var playerData = new
+            {
+                player.PlayerId,
+                player.FullName,
+                player.IsActive,
+                player.CreatedOn,
+                player.MultiParticipations,
+                player.MultiTitlesWon
+            };
+
+            return new ApiResponse<object>(true, "Player added successfully", playerData);
         }
 
         #endregion
@@ -499,7 +737,7 @@ namespace YuGiTournament.Api.Services
             // Validate players per team
             foreach (var team in tournament.Teams)
             {
-                var playerIds = JsonSerializer.Deserialize<List<int>>(team.PlayerIds) ?? new List<int>();
+                var playerIds = SafeDeserializePlayerIds(team.PlayerIds);
                 if (playerIds.Count != tournament.PlayersPerTeam)
                     return new ApiResponse(false, $"Team '{team.TeamName}' has {playerIds.Count} players, expected {tournament.PlayersPerTeam}");
             }
@@ -515,10 +753,12 @@ namespace YuGiTournament.Api.Services
                     var team1 = teams[i];
                     var team2 = teams[j];
 
-                    var team1Players = JsonSerializer.Deserialize<List<int>>(team1.PlayerIds) ?? new List<int>();
-                    var team2Players = JsonSerializer.Deserialize<List<int>>(team2.PlayerIds) ?? new List<int>();
+                    var team1Players = SafeDeserializePlayerIds(team1.PlayerIds);
+                    var team2Players = SafeDeserializePlayerIds(team2.PlayerIds);
 
                     // Every player from team1 plays every player from team2
+                    // Note: In Points system, total score must equal maxRoundsPerMatch from GameRules
+                    // This is different from the old system where total score = team1Players.Count × team2Players.Count
                     foreach (var player1Id in team1Players)
                     {
                         foreach (var player2Id in team2Players)
@@ -546,28 +786,59 @@ namespace YuGiTournament.Api.Services
             var team1 = match.Team1!;
             var team2 = match.Team2!;
 
-            if (match.Tournament!.SystemOfScoring == SystemOfLeague.Classic)
+            var score1 = match.Score1!.Value;
+            var score2 = match.Score2!.Value;
+
+            team1.TotalPoints += score1;
+            team2.TotalPoints += score2;
+
+            // Update wins/draws/losses for both systems
+            if (match.WinnerId == null) // Draw
             {
-                var score1 = match.Score1!.Value;
-                var score2 = match.Score2!.Value;
-
-                team1.TotalPoints += score1;
-                team2.TotalPoints += score2;
-
-                if (score1 == 3) { team1.Wins++; team2.Losses++; }
-                else if (score2 == 3) { team2.Wins++; team1.Losses++; }
-                else { team1.Draws++; team2.Draws++; }
+                team1.Draws++;
+                team2.Draws++;
             }
-            else // Points system
+            else if (match.WinnerId == match.Player1Id) // Player1 won
             {
-                var points1 = match.TotalPoints1!.Value;
-                var points2 = match.TotalPoints2!.Value;
+                team1.Wins++;
+                team2.Losses++;
+            }
+            else // Player2 won
+            {
+                team2.Wins++;
+                team1.Losses++;
+            }
 
-                team1.TotalPoints += points1;
-                team2.TotalPoints += points2;
+            _unitOfWork.GetRepository<MultiTeam>().Update(team1);
+            _unitOfWork.GetRepository<MultiTeam>().Update(team2);
 
-                // For Points system, we don't track wins/draws/losses at team level
-                // since it's about accumulated points
+            return Task.CompletedTask;
+        }
+
+        private Task RevertTeamStatisticsAsync(MultiMatch match, double oldScore1, double oldScore2, int? oldWinnerId)
+        {
+            var team1 = match.Team1!;
+            var team2 = match.Team2!;
+
+            // Revert total points
+            team1.TotalPoints -= oldScore1;
+            team2.TotalPoints -= oldScore2;
+
+            // Revert wins/draws/losses
+            if (oldWinnerId == null) // Was draw
+            {
+                team1.Draws--;
+                team2.Draws--;
+            }
+            else if (oldWinnerId == match.Player1Id) // Player1 had won
+            {
+                team1.Wins--;
+                team2.Losses--;
+            }
+            else // Player2 had won
+            {
+                team2.Wins--;
+                team1.Losses--;
             }
 
             _unitOfWork.GetRepository<MultiTeam>().Update(team1);
@@ -580,7 +851,7 @@ namespace YuGiTournament.Api.Services
         {
             // Update FriendlyPlayer statistics
             var allPlayerIds = tournament.Teams
-                .SelectMany(t => JsonSerializer.Deserialize<List<int>>(t.PlayerIds) ?? new List<int>())
+                .SelectMany(t => SafeDeserializePlayerIds(t.PlayerIds))
                 .Distinct()
                 .ToList();
 
@@ -598,7 +869,7 @@ namespace YuGiTournament.Api.Services
             if (tournament.ChampionTeamId.HasValue)
             {
                 var championTeam = tournament.Teams.First(t => t.MultiTeamId == tournament.ChampionTeamId);
-                var championPlayerIds = JsonSerializer.Deserialize<List<int>>(championTeam.PlayerIds) ?? new List<int>();
+                var championPlayerIds = SafeDeserializePlayerIds(championTeam.PlayerIds);
 
                 var championPlayers = players.Where(p => championPlayerIds.Contains(p.PlayerId));
                 foreach (var player in championPlayers)
@@ -616,7 +887,7 @@ namespace YuGiTournament.Api.Services
 
             foreach (var team in tournament.Teams)
             {
-                var playerIds = JsonSerializer.Deserialize<List<int>>(team.PlayerIds) ?? new List<int>();
+                var playerIds = SafeDeserializePlayerIds(team.PlayerIds);
                 var players = await _unitOfWork.GetRepository<FriendlyPlayer>()
                     .GetAll()
                     .Where(p => playerIds.Contains(p.PlayerId))
@@ -664,9 +935,19 @@ namespace YuGiTournament.Api.Services
             };
         }
 
-        private static bool IsValidClassicScore(int score1, int score2)
+        private static List<int> SafeDeserializePlayerIds(string playerIds)
         {
-            return (score1, score2) is (3, 0) or (0, 3) or (1, 1);
+            if (string.IsNullOrWhiteSpace(playerIds))
+                return new List<int>();
+
+            try
+            {
+                return JsonSerializer.Deserialize<List<int>>(playerIds) ?? new List<int>();
+            }
+            catch (JsonException)
+            {
+                return new List<int>();
+            }
         }
 
         #endregion

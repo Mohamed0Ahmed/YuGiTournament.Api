@@ -9,13 +9,12 @@ namespace YuGiTournament.Api.Models
         public int Player1Id { get; set; }
         public int Player2Id { get; set; }
 
-        // Classic scoring (allowed values: 3/0, 0/3, 1/1)
-        public int? Score1 { get; set; }
-        public int? Score2 { get; set; }
+        // Match scores for both Classic and Points systems
+        public double? Score1 { get; set; }
+        public double? Score2 { get; set; }
 
-        // Points scoring: sum of rounds per player
-        public double? TotalPoints1 { get; set; }
-        public double? TotalPoints2 { get; set; }
+        // Winner of the match (null for draw)
+        public int? WinnerId { get; set; }
 
         public bool IsCompleted { get; set; } = false;
         public DateTime? CompletedOn { get; set; }
@@ -26,6 +25,7 @@ namespace YuGiTournament.Api.Models
         public MultiTeam? Team2 { get; set; }
         public FriendlyPlayer? Player1 { get; set; }
         public FriendlyPlayer? Player2 { get; set; }
+        public FriendlyPlayer? Winner { get; set; }
     }
 }
 

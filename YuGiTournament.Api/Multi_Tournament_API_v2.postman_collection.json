@@ -1,0 +1,593 @@
+{
+    "info": {
+        "name": "Multi Tournament API v2 - Updated System",
+        "description": "نظام البطولات المتعددة المحدث والمبسط - شبيه بنظام الوديات",
+        "version": "2.0.0",
+        "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+    },
+    "auth": {
+        "type": "bearer",
+        "bearer": [
+            {
+                "key": "token",
+                "value": "{{jwt_token}}",
+                "type": "string"
+            }
+        ]
+    },
+    "variable": [
+        {
+            "key": "base_url",
+            "value": "http://localhost:5000",
+            "type": "string"
+        },
+        {
+            "key": "tournament_id",
+            "value": "1",
+            "type": "string"
+        },
+        {
+            "key": "team_id",
+            "value": "1",
+            "type": "string"
+        },
+        {
+            "key": "match_id",
+            "value": "1",
+            "type": "string"
+        },
+        {
+            "key": "player_id",
+            "value": "1",
+            "type": "string"
+        }
+    ],
+    "item": [
+        {
+            "name": "🏆 Tournament Management",
+            "item": [
+                {
+                    "name": "إنشاء بطولة جديدة",
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"name\": \"بطولة الربيع 2024\",\n  \"systemOfScoring\": \"Classic\",\n  \"teamCount\": 4,\n  \"playersPerTeam\": 3\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/multi/tournaments",
+                            "host": ["{{base_url}}"],
+                            "path": ["api", "multi", "tournaments"]
+                        },
+                        "description": "إنشاء بطولة جديدة\n\nSystemOfScoring: Classic أو Points\nTeamCount: عدد الفرق (>= 2)\nPlayersPerTeam: عدد اللاعبين في كل فريق (>= 1)"
+                    }
+                },
+                {
+                    "name": "تحديث حالة البطولة",
+                    "request": {
+                        "method": "PUT",
+                        "header": [],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"status\": \"Started\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/multi/tournaments/{{tournament_id}}/status",
+                            "host": ["{{base_url}}"],
+                            "path": [
+                                "api",
+                                "multi",
+                                "tournaments",
+                                "{{tournament_id}}",
+                                "status"
+                            ]
+                        },
+                        "description": "تحديث حالة البطولة\n\nStatus: Created → Started → Finished\n\nعند Started: يتم إنشاء المباريات تلقائياً\nعند Finished: يتم تحديث إحصائيات اللاعبين"
+                    }
+                },
+                {
+                    "name": "بدء البطولة (Helper)",
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/api/multi/tournaments/{{tournament_id}}/start",
+                            "host": ["{{base_url}}"],
+                            "path": [
+                                "api",
+                                "multi",
+                                "tournaments",
+                                "{{tournament_id}}",
+                                "start"
+                            ]
+                        },
+                        "description": "shortcut لبدء البطولة"
+                    }
+                },
+                {
+                    "name": "إنهاء البطولة (Helper)",
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/api/multi/tournaments/{{tournament_id}}/finish",
+                            "host": ["{{base_url}}"],
+                            "path": [
+                                "api",
+                                "multi",
+                                "tournaments",
+                                "{{tournament_id}}",
+                                "finish"
+                            ]
+                        },
+                        "description": "shortcut لإنهاء البطولة"
+                    }
+                },
+                {
+                    "name": "حذف البطولة",
+                    "request": {
+                        "method": "DELETE",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/api/multi/tournaments/{{tournament_id}}",
+                            "host": ["{{base_url}}"],
+                            "path": [
+                                "api",
+                                "multi",
+                                "tournaments",
+                                "{{tournament_id}}"
+                            ]
+                        },
+                        "description": "حذف البطولة وكل البيانات المرتبطة بها"
+                    }
+                }
+            ]
+        },
+        {
+            "name": "👥 Team Management",
+            "item": [
+                {
+                    "name": "إنشاء فريق جديد",
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"teamName\": \"فريق النجوم\",\n  \"playerIds\": [1, 2, 3]\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/multi/tournaments/{{tournament_id}}/teams",
+                            "host": ["{{base_url}}"],
+                            "path": [
+                                "api",
+                                "multi",
+                                "tournaments",
+                                "{{tournament_id}}",
+                                "teams"
+                            ]
+                        },
+                        "description": "إنشاء فريق جديد في البطولة\n\nيجب أن يكون عدد اللاعبين = playersPerTeam المحدد في البطولة\nأسماء الفرق فريدة داخل البطولة\nاللاعبين غير مكررين في نفس البطولة"
+                    }
+                },
+                {
+                    "name": "تحديث الفريق",
+                    "request": {
+                        "method": "PUT",
+                        "header": [],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"teamName\": \"الفريق الذهبي\",\n  \"playerIds\": [1, 2, 4]\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/multi/teams/{{team_id}}",
+                            "host": ["{{base_url}}"],
+                            "path": ["api", "multi", "teams", "{{team_id}}"]
+                        },
+                        "description": "تحديث اسم الفريق أو اللاعبين\n\nيمكن التحديث فقط في حالة Created\nكل الحقول اختيارية"
+                    }
+                },
+                {
+                    "name": "استبدال لاعب في الفريق",
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"replacedPlayerId\": 123,\n  \"newPlayerId\": 456\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/multi/teams/{{team_id}}/replace-player",
+                            "host": ["{{base_url}}"],
+                            "path": [
+                                "api",
+                                "multi",
+                                "teams",
+                                "{{team_id}}",
+                                "replace-player"
+                            ]
+                        },
+                        "description": "استبدال لاعب في الفريق أثناء البطولة\n\nيمكن الاستبدال فقط أثناء البطولة (Started)\nيتم تحديث المباريات غير المكتملة تلقائياً"
+                    }
+                }
+            ]
+        },
+        {
+            "name": "⚔️ Match Management",
+            "item": [
+                {
+                    "name": "تسجيل نتيجة - نظام كلاسيكي",
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"winnerId\": 123\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/multi/matches/{{match_id}}/result",
+                            "host": ["{{base_url}}"],
+                            "path": [
+                                "api",
+                                "multi",
+                                "matches",
+                                "{{match_id}}",
+                                "result"
+                            ]
+                        },
+                        "description": "تسجيل نتيجة في النظام الكلاسيكي\n\nيرسل winnerId فقط\nالفائز يأخذ 3-0 تلقائياً\nالخاسر يأخذ 0-3"
+                    }
+                },
+                {
+                    "name": "تسجيل نتيجة - نظام النقاط",
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"score1\": 5,\n  \"score2\": 3\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/multi/matches/{{match_id}}/result",
+                            "host": ["{{base_url}}"],
+                            "path": [
+                                "api",
+                                "multi",
+                                "matches",
+                                "{{match_id}}",
+                                "result"
+                            ]
+                        },
+                        "description": "تسجيل نتيجة في نظام النقاط\n\nيرسل score1 و score2\nصاحب أكبر نقاط يصبح فائز تلقائياً\nإذا تعادل: winnerId = null"
+                    }
+                },
+                {
+                    "name": "تسجيل تعادل - نظام النقاط",
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"score1\": 2,\n  \"score2\": 2\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/multi/matches/{{match_id}}/result",
+                            "host": ["{{base_url}}"],
+                            "path": [
+                                "api",
+                                "multi",
+                                "matches",
+                                "{{match_id}}",
+                                "result"
+                            ]
+                        },
+                        "description": "مثال على التعادل في نظام النقاط\n\nعندما score1 = score2\nwinnerId = null\nكل فريق يأخذ نقطة واحدة"
+                    }
+                },
+                {
+                    "name": "إلغاء نتيجة المباراة (Undo)",
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/api/multi/matches/{{match_id}}/undo",
+                            "host": ["{{base_url}}"],
+                            "path": [
+                                "api",
+                                "multi",
+                                "matches",
+                                "{{match_id}}",
+                                "undo"
+                            ]
+                        },
+                        "description": "إلغاء نتيجة المباراة وإرجاعها للحالة الأولية\n\nscore1 = 0, score2 = 0\nwinnerId = null\nisCompleted = false\nإرجاع إحصائيات الفرق"
+                    }
+                }
+            ]
+        },
+        {
+            "name": "👤 Player Management",
+            "item": [
+                {
+                    "name": "جلب كل اللاعبين",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/api/multi/players",
+                            "host": ["{{base_url}}"],
+                            "path": ["api", "multi", "players"]
+                        },
+                        "description": "جلب قائمة بكل اللاعبين المتاحين"
+                    }
+                },
+                {
+                    "name": "جلب لاعب محدد",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/api/multi/players/{{player_id}}",
+                            "host": ["{{base_url}}"],
+                            "path": ["api", "multi", "players", "{{player_id}}"]
+                        },
+                        "description": "جلب تفاصيل لاعب محدد"
+                    }
+                },
+                {
+                    "name": "إضافة لاعب جديد",
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"fullName\": \"محمد أحمد\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/multi/players",
+                            "host": ["{{base_url}}"],
+                            "path": ["api", "multi", "players"]
+                        },
+                        "description": "إضافة لاعب جديد للنظام"
+                    }
+                },
+                {
+                    "name": "جلب مباريات لاعب معين",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/api/multi/players/{{player_id}}/matches",
+                            "host": ["{{base_url}}"],
+                            "path": [
+                                "api",
+                                "multi",
+                                "players",
+                                "{{player_id}}",
+                                "matches"
+                            ]
+                        },
+                        "description": "جلب كل مباريات لاعب معين في البطولة النشطة\n\nيرجع:\n- المباريات المكتملة والناقصة\n- تفاصيل المباريات\n- إحصائيات سريعة\n\nمفيد للأدمن لتسجيل النتائج أو عمل Undo"
+                    }
+                }
+            ]
+        },
+        {
+            "name": "📊 Data Retrieval",
+            "item": [
+                {
+                    "name": "جلب البطولة النشطة",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/api/multi/tournaments/active",
+                            "host": ["{{base_url}}"],
+                            "path": ["api", "multi", "tournaments", "active"]
+                        },
+                        "description": "جلب البطولة النشطة الحالية مع كل التفاصيل"
+                    }
+                },
+                {
+                    "name": "جلب بطولة محددة",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/api/multi/tournaments/{{tournament_id}}",
+                            "host": ["{{base_url}}"],
+                            "path": [
+                                "api",
+                                "multi",
+                                "tournaments",
+                                "{{tournament_id}}"
+                            ]
+                        },
+                        "description": "جلب تفاصيل بطولة محددة"
+                    }
+                },
+                {
+                    "name": "جلب كل البطولات",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/api/multi/tournaments",
+                            "host": ["{{base_url}}"],
+                            "path": ["api", "multi", "tournaments"]
+                        },
+                        "description": "جلب قائمة بكل البطولات (التاريخ)"
+                    }
+                },
+                {
+                    "name": "جلب مباريات البطولة",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/api/multi/tournaments/{{tournament_id}}/matches",
+                            "host": ["{{base_url}}"],
+                            "path": [
+                                "api",
+                                "multi",
+                                "tournaments",
+                                "{{tournament_id}}",
+                                "matches"
+                            ]
+                        },
+                        "description": "جلب كل مباريات البطولة مجمعة حسب الفرق\n\nيرجع:\n- المباريات مجمعة بالفرق\n- تفاصيل كل مباراة\n- winnerId و winnerName\n- حالة المباراة"
+                    }
+                },
+                {
+                    "name": "جلب مباريات البطولة النشطة",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/api/multi/tournaments/active/matches",
+                            "host": ["{{base_url}}"],
+                            "path": [
+                                "api",
+                                "multi",
+                                "tournaments",
+                                "active",
+                                "matches"
+                            ]
+                        },
+                        "description": "جلب مباريات البطولة النشطة"
+                    }
+                },
+                {
+                    "name": "جلب ترتيب البطولة",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/api/multi/tournaments/{{tournament_id}}/standings",
+                            "host": ["{{base_url}}"],
+                            "path": [
+                                "api",
+                                "multi",
+                                "tournaments",
+                                "{{tournament_id}}",
+                                "standings"
+                            ]
+                        },
+                        "description": "جلب ترتيب الفرق في البطولة\n\nمرتب حسب:\n1. إجمالي النقاط\n2. عدد الانتصارات\n3. عدد الهزائم"
+                    }
+                }
+            ]
+        }
+    ],
+    "event": [
+        {
+            "listen": "prerequest",
+            "script": {
+                "type": "text/javascript",
+                "exec": [
+                    "// Auto-generate tournament ID for testing",
+                    "if (!pm.variables.get('tournament_id')) {",
+                    "    pm.variables.set('tournament_id', '1');",
+                    "}",
+                    "",
+                    "// Auto-generate team ID for testing",
+                    "if (!pm.variables.get('team_id')) {",
+                    "    pm.variables.set('team_id', '1');",
+                    "}",
+                    "",
+                    "// Auto-generate match ID for testing",
+                    "if (!pm.variables.get('match_id')) {",
+                    "    pm.variables.set('match_id', '1');",
+                    "}",
+                    "",
+                    "// Auto-generate player ID for testing",
+                    "if (!pm.variables.get('player_id')) {",
+                    "    pm.variables.set('player_id', '1');",
+                    "}"
+                ]
+            }
+        },
+        {
+            "listen": "test",
+            "script": {
+                "type": "text/javascript",
+                "exec": [
+                    "// Basic response validation",
+                    "pm.test('Response status is success', function () {",
+                    "    pm.response.to.have.status(200);",
+                    "});",
+                    "",
+                    "pm.test('Response has correct structure', function () {",
+                    "    const jsonData = pm.response.json();",
+                    "    pm.expect(jsonData).to.have.property('success');",
+                    "    pm.expect(jsonData).to.have.property('message');",
+                    "});",
+                    "",
+                    "// Store response data for chaining requests",
+                    "const jsonData = pm.response.json();",
+                    "if (jsonData.success && jsonData.data) {",
+                    "    // Store tournament ID if created",
+                    "    if (jsonData.data.multiTournamentId) {",
+                    "        pm.variables.set('tournament_id', jsonData.data.multiTournamentId);",
+                    "    }",
+                    "    ",
+                    "    // Store team ID if created",
+                    "    if (jsonData.data.multiTeamId) {",
+                    "        pm.variables.set('team_id', jsonData.data.multiTeamId);",
+                    "    }",
+                    "    ",
+                    "    // Store player ID if created",
+                    "    if (jsonData.data.playerId) {",
+                    "        pm.variables.set('player_id', jsonData.data.playerId);",
+                    "    }",
+                    "}"
+                ]
+            }
+        }
+    ]
+}

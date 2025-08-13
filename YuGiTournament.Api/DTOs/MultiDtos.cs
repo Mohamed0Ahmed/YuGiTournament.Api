@@ -11,8 +11,15 @@ namespace YuGiTournament.Api.DTOs
     public record TeamUpdateDto(string? TeamName, List<int>? PlayerIds);
 
     // Match DTOs
-    public record MultiMatchResultDto(int? Score1, int? Score2, double? TotalPoints1, double? TotalPoints2);
+    public record MultiMatchResultDto(
+        int? WinnerId = null,        // For Classic system
+        double? Score1 = null,       // For Points system
+        double? Score2 = null        // For Points system
+    );
     public record PlayerReplaceDto(int ReplacedPlayerId, int NewPlayerId);
+
+    // Player DTOs
+    public record AddPlayerDto(string FullName);
 }
 
 

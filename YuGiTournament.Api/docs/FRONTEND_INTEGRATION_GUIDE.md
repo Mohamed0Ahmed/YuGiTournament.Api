@@ -47,6 +47,9 @@ export interface Player {
     playerId: number;
     fullName: string;
     isActive: boolean;
+    createdOn: string;
+    multiParticipations: number;
+    multiTitlesWon: number;
 }
 
 export interface Match {
@@ -129,6 +132,11 @@ export interface ApiResponse<T = any> {
     message: string;
     data?: T;
 }
+
+// For adding new players
+export interface AddPlayerRequest {
+    fullName: string;
+}
 ```
 
 ---
@@ -146,6 +154,7 @@ import { environment } from "../environments/environment";
 })
 export class MultiTournamentService {
     private readonly apiUrl = `${environment.apiUrl}/multi`;
+    private readonly friendlyApiUrl = `${environment.apiUrl}/FriendlyMatch`;
 
     constructor(private http: HttpClient) {}
 
@@ -259,6 +268,26 @@ export class MultiTournamentService {
             playerIds: [replacedPlayerId, newPlayerId],
         });
     }
+
+    // إدارة اللاعبين (من جدول FriendlyPlayer)
+    getAllPlayers(): Observable<ApiResponse<Player[]>> {
+        return this.http.get<ApiResponse<Player[]>>(
+            `${this.friendlyApiUrl}/players`
+        );
+    }
+
+    getPlayerById(playerId: number): Observable<ApiResponse<Player>> {
+        return this.http.get<ApiResponse<Player>>(
+            `${this.friendlyApiUrl}/players/${playerId}`
+        );
+    }
+
+    addNewPlayer(request: AddPlayerRequest): Observable<ApiResponse<Player>> {
+        return this.http.post<ApiResponse<Player>>(
+            `${this.friendlyApiUrl}/players`,
+            request
+        );
+    }
 }
 ```
 
@@ -294,27 +323,107 @@ export class CreateTournamentComponent {
 }
 ```
 
-### 2. إضافة فريق مع اللاعبين
+### 2. جلب جميع اللاعبين المتاحين
+
+```typescript
+// players-list.component.ts
+export class PlayersListComponent implements OnInit {
+    availablePlayers: Player[] = [];
+    selectedPlayers: number[] = [];
+
+    ngOnInit() {
+        this.loadAvailablePlayers();
+    }
+
+    loadAvailablePlayers() {
+        this.tournamentService.getAllPlayers().subscribe({
+            next: (response) => {
+                if (response.success) {
+                    // فقط اللاعبين النشطين
+                    this.availablePlayers =
+                        response.data?.filter((p) => p.isActive) || [];
+                }
+            },
+            error: (error) => console.error("خطأ في جلب اللاعبين:", error),
+        });
+    }
+
+    togglePlayerSelection(playerId: number) {
+        const index = this.selectedPlayers.indexOf(playerId);
+        if (index === -1) {
+            this.selectedPlayers.push(playerId);
+        } else {
+            this.selectedPlayers.splice(index, 1);
+        }
+    }
+
+    isPlayerSelected(playerId: number): boolean {
+        return this.selectedPlayers.includes(playerId);
+    }
+}
+```
+
+### 3. إضافة فريق مع اللاعبين المختارين
 
 ```typescript
 // add-team.component.ts
 export class AddTeamComponent {
+    availablePlayers: Player[] = [];
     selectedPlayers: number[] = [];
+    teamName: string = "";
+
+    ngOnInit() {
+        this.loadAvailablePlayers();
+    }
+
+    loadAvailablePlayers() {
+        this.tournamentService.getAllPlayers().subscribe({
+            next: (response) => {
+                if (response.success) {
+                    this.availablePlayers =
+                        response.data?.filter((p) => p.isActive) || [];
+                }
+            },
+        });
+    }
 
     addTeam(tournamentId: number) {
+        if (this.selectedPlayers.length === 0) {
+            console.error("يجب اختيار لاعبين أولاً");
+            return;
+        }
+
         const request: CreateTeamRequest = {
-            teamName: "فريق النسور",
-            playerIds: this.selectedPlayers, // [1, 2, 3]
+            teamName: this.teamName,
+            playerIds: this.selectedPlayers,
         };
 
         this.tournamentService.createTeam(tournamentId, request).subscribe({
             next: (response) => {
                 if (response.success) {
                     console.log("تم إضافة الفريق بنجاح");
-                    this.selectedPlayers = []; // إعادة تعيين
+                    this.selectedPlayers = [];
+                    this.teamName = "";
                 }
             },
+            error: (error) => console.error("خطأ في إضافة الفريق:", error),
         });
+    }
+
+    addNewPlayer() {
+        const playerName = prompt("أدخل اسم اللاعب الجديد:");
+        if (playerName?.trim()) {
+            const request: AddPlayerRequest = { fullName: playerName.trim() };
+
+            this.tournamentService.addNewPlayer(request).subscribe({
+                next: (response) => {
+                    if (response.success) {
+                        console.log("تم إضافة اللاعب الجديد");
+                        this.loadAvailablePlayers(); // إعادة تحميل القائمة
+                    }
+                },
+            });
+        }
     }
 }
 ```
@@ -435,6 +544,76 @@ export class StandingsComponent implements OnInit {
             </tr>
         </tbody>
     </table>
+</div>
+```
+
+### اختيار اللاعبين لإنشاء فريق
+
+```html
+<!-- add-team.component.html -->
+<div class="add-team-container">
+    <h2>إضافة فريق جديد</h2>
+
+    <!-- اسم الفريق -->
+    <div class="team-name-section">
+        <label for="teamName">اسم الفريق:</label>
+        <input
+            id="teamName"
+            type="text"
+            [(ngModel)]="teamName"
+            placeholder="أدخل اسم الفريق"
+            class="team-name-input"
+        />
+    </div>
+
+    <!-- قائمة اللاعبين المتاحين -->
+    <div class="players-section">
+        <h3>اختر اللاعبين:</h3>
+
+        <div class="players-grid">
+            <div
+                *ngFor="let player of availablePlayers"
+                class="player-card"
+                [class.selected]="isPlayerSelected(player.playerId)"
+                (click)="togglePlayerSelection(player.playerId)"
+            >
+                <div class="player-info">
+                    <span class="player-name">{{ player.fullName }}</span>
+                    <span class="player-stats">
+                        بطولات: {{ player.multiParticipations }} | ألقاب: {{
+                        player.multiTitlesWon }}
+                    </span>
+                </div>
+
+                <div
+                    class="selection-indicator"
+                    *ngIf="isPlayerSelected(player.playerId)"
+                >
+                    ✓
+                </div>
+            </div>
+        </div>
+
+        <p class="selection-count">
+            تم اختيار {{ selectedPlayers.length }} من {{ requiredPlayersCount }}
+            لاعب
+        </p>
+    </div>
+
+    <!-- أزرار العمليات -->
+    <div class="actions">
+        <button
+            (click)="addTeam(tournamentId)"
+            [disabled]="selectedPlayers.length !== requiredPlayersCount || !teamName.trim()"
+            class="add-team-btn"
+        >
+            إضافة الفريق
+        </button>
+
+        <button (click)="addNewPlayer()" class="add-player-btn">
+            إضافة لاعب جديد
+        </button>
+    </div>
 </div>
 ```
 
@@ -570,14 +749,44 @@ export class LiveMatchesComponent {
 
 ---
 
+## 📌 نقاط مهمة حول اللاعبين
+
+### 🎮 **نظام اللاعبين في Multi Tournament:**
+
+-   ✅ اللاعبون موجودون في جدول `FriendlyPlayer` منفصل
+-   ✅ كل لاعب له معرف فريد (`playerId`)
+-   ✅ يمكن إضافة لاعبين جدد عبر API: `/FriendlyMatch/players`
+-   ✅ فقط اللاعبين النشطين (`isActive: true`) يظهرون للاختيار
+-   ✅ كل لاعب له إحصائيات: عدد البطولات وعدد الألقاب
+
+### 🔄 **تدفق العمل مع اللاعبين:**
+
+```
+1. جلب جميع اللاعبين المتاحين → GET /FriendlyMatch/players
+2. عرضهم للمستخدم للاختيار
+3. إرسال معرفات اللاعبين المختارين عند إنشاء الفريق
+4. النظام يربط اللاعبين بالفريق عبر JSON في PlayerIds
+```
+
+### ⚠️ **تنبيهات مهمة:**
+
+-   لا يمكن للاعب أن يكون في أكثر من فريق في نفس البطولة
+-   اللاعبين المحذوفين (`isActive: false`) لا يظهرون في القائمة
+-   معرفات اللاعبين ترسل كـ Array من الأرقام: `[1, 2, 3]`
+
 ## ✅ Checklist للتطبيق
 
 -   [ ] نسخ الـ Types للـ Angular project
 -   [ ] إنشاء الـ Service مع جميع الـ methods
+-   [ ] إضافة APIs اللاعبين (`/FriendlyMatch/players`)
 -   [ ] إعداد الـ HTTP Interceptors للـ Authentication
--   [ ] إنشاء الكمبوننتس الأساسية
+-   [ ] إنشاء كمبوننت اختيار اللاعبين
+-   [ ] إنشاء الكمبوننتس الأساسية للبطولة
 -   [ ] إضافة الـ Error Handling
 -   [ ] تطبيق الـ Loading States
 -   [ ] اختبار جميع الـ APIs
+-   [ ] اختبار تدفق إنشاء فريق مع اللاعبين
 
 **🎉 الدوكس دي كاملة وجاهزة للاستخدام في Angular مباشرة!**
+
+**💡 نصيحة إضافية:** ابدأ بتطبيق جلب اللاعبين أولاً قبل باقي النظام عشان تتأكد إن الـ API شغال صح.

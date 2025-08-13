@@ -18,14 +18,22 @@ namespace YuGiTournament.Api.Services.Abstractions
         Task<ApiResponse> ReplacePlayerAsync(int teamId, int replacedPlayerId, int newPlayerId);
 
         // Match Management
-        Task<ApiResponse> RecordMatchResultAsync(int matchId, int? score1, int? score2, double? totalPoints1, double? totalPoints2);
+        Task<ApiResponse> RecordMatchResultAsync(int matchId, int? winnerId, double? score1, double? score2);
+        Task<ApiResponse> UndoMatchResultAsync(int matchId);
+        Task<ApiResponse> GetPlayerMatchesAsync(int playerId);
 
         // Data Retrieval
         Task<ApiResponse> GetActiveTournamentAsync();
         Task<ApiResponse> GetTournamentByIdAsync(int tournamentId);
         Task<ApiResponse> GetAllTournamentsAsync();
         Task<ApiResponse> GetTournamentMatchesAsync(int tournamentId);
+        Task<ApiResponse> GetActiveTournamentMatchesAsync();
         Task<ApiResponse> GetTournamentStandingsAsync(int tournamentId);
+
+        // Player Management
+        Task<ApiResponse> GetAllPlayersAsync();
+        Task<ApiResponse> GetPlayerByIdAsync(int playerId);
+        Task<ApiResponse> AddPlayerAsync(string fullName);
 
         #endregion
     }

@@ -98,7 +98,7 @@ namespace YuGiTournament.Api.Controllers
 
         #endregion
 
-        #region Match & Results (2 endpoints)
+        #region Match & Results (3 endpoints)
 
         /// <summary>
         /// Get tournament details by ID
@@ -111,6 +111,16 @@ namespace YuGiTournament.Api.Controllers
         }
 
         /// <summary>
+        /// Get tournament matches/fixtures
+        /// </summary>
+        [HttpGet("tournaments/{id}/matches")]
+        public async Task<IActionResult> GetTournamentMatches(int id)
+        {
+            var result = await _service.GetTournamentMatchesAsync(id);
+            return Ok(result);
+        }
+
+        /// <summary>
         /// Record match result
         /// </summary>
         [HttpPost("matches/{matchId}/result")]
@@ -119,17 +129,109 @@ namespace YuGiTournament.Api.Controllers
         {
             var result = await _service.RecordMatchResultAsync(
                 matchId,
+                request.WinnerId,
                 request.Score1,
-                request.Score2,
-                request.TotalPoints1,
-                request.TotalPoints2);
+                request.Score2);
 
+            return Ok(result);
+        }
+
+        /// <summary>
+        /// Undo match result (reset to 0-0, IsCompleted = false)
+        /// </summary>
+        [HttpPost("matches/{matchId}/undo")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> UndoMatchResult(int matchId)
+        {
+            var result = await _service.UndoMatchResultAsync(matchId);
+            return Ok(result);
+        }
+
+        /// <summary>
+        /// Get all matches for a specific player in active tournament
+        /// </summary>
+        [HttpGet("players/{playerId}/matches")]
+        public async Task<IActionResult> GetPlayerMatches(int playerId)
+        {
+            var result = await _service.GetPlayerMatchesAsync(playerId);
             return Ok(result);
         }
 
         #endregion
 
-        #region General Data (3 endpoints)
+        #region Player Management (3 endpoints)
+
+        /// <summary>
+        /// Get all available players for team creation
+        /// </summary>
+        [HttpGet("players")]
+        public async Task<IActionResult> GetAllPlayers()
+        {
+            var result = await _service.GetAllPlayersAsync();
+            return Ok(result);
+        }
+
+        /// <summary>
+        /// Get specific player by ID
+        /// </summary>
+        [HttpGet("players/{playerId}")]
+        public async Task<IActionResult> GetPlayerById(int playerId)
+        {
+            var result = await _service.GetPlayerByIdAsync(playerId);
+            return Ok(result);
+        }
+
+        /// <summary>
+        /// Add new player to the system
+        /// </summary>
+        [HttpPost("players")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> AddPlayer([FromBody] AddPlayerDto request)
+        {
+            var result = await _service.AddPlayerAsync(request.FullName);
+            return Ok(result);
+        }
+
+        #endregion
+
+        #region Helper Endpoints (3 endpoints)
+
+        /// <summary>
+        /// Start tournament (helper method)
+        /// </summary>
+        [HttpPost("tournaments/{id}/start")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> StartTournament(int id)
+        {
+            var result = await _service.UpdateTournamentStatusAsync(id, TournamentStatus.Started);
+            return Ok(result);
+        }
+
+        /// <summary>
+        /// Finish tournament (helper method)
+        /// </summary>
+        [HttpPost("tournaments/{id}/finish")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> FinishTournament(int id)
+        {
+            var result = await _service.UpdateTournamentStatusAsync(id, TournamentStatus.Finished);
+            return Ok(result);
+        }
+
+        /// <summary>
+        /// Replace player in team (helper method)
+        /// </summary>
+        [HttpPost("teams/{teamId}/replace-player")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> ReplacePlayer(int teamId, [FromBody] PlayerReplaceDto request)
+        {
+            var result = await _service.ReplacePlayerAsync(teamId, request.ReplacedPlayerId, request.NewPlayerId);
+            return Ok(result);
+        }
+
+        #endregion
+
+        #region General Data (4 endpoints)
 
         /// <summary>
         /// Get active tournament
@@ -138,6 +240,16 @@ namespace YuGiTournament.Api.Controllers
         public async Task<IActionResult> GetActiveTournament()
         {
             var result = await _service.GetActiveTournamentAsync();
+            return Ok(result);
+        }
+
+        /// <summary>
+        /// Get matches for the active tournament
+        /// </summary>
+        [HttpGet("tournaments/active/matches")]
+        public async Task<IActionResult> GetActiveTournamentMatches()
+        {
+            var result = await _service.GetActiveTournamentMatchesAsync();
             return Ok(result);
         }
 
@@ -169,7 +281,7 @@ namespace YuGiTournament.Api.Controllers
     public record CreateTournamentRequest(string Name, SystemOfLeague SystemOfScoring, int TeamCount, int PlayersPerTeam);
     public record TeamCreateRequest(string TeamName, List<int> PlayerIds);
     public record TeamUpdateRequest(string? TeamName, List<int>? PlayerIds);
-    public record MultiMatchResultRequest(int? Score1, int? Score2, double? TotalPoints1, double? TotalPoints2);
+    public record MultiMatchResultRequest(double? Score1, double? Score2, double? TotalPoints1, double? TotalPoints2);
     public record PlayerReplaceRequest(int ReplacedPlayerId, int NewPlayerId);
     public record UpdateTournamentStatusRequest(TournamentStatus Status);
 
