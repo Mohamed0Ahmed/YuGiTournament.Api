@@ -1,4 +1,6 @@
-﻿namespace YuGiTournament.Api.Models
+﻿using YuGiTournament.Api.Models;
+
+namespace YuGiTournament.Api.Models
 {
     public class Player : DeletedEntity
     {
@@ -16,11 +18,19 @@
 
 
 
-        public void UpdateStats()
+        public void UpdateStats(SystemOfLeague system = SystemOfLeague.Points)
         {
             MatchesPlayed = Wins + Losses + Draws;
             WinRate = MatchesPlayed > 0 ? (double)Wins / MatchesPlayed * 100 : 0;
-            Points = Wins + ((double)Draws / 2);
+
+            if (system == SystemOfLeague.Classic)
+            {
+                Points = (Wins * 3) + Draws;  // Classic: فوز = 3، تعادل = 1
+            }
+            else
+            {
+                Points = Wins + ((double)Draws / 2);  // Points: فوز = 1، تعادل = 0.5
+            }
         }
     }
 }

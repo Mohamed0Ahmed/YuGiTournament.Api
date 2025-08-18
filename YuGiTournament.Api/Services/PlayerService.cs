@@ -89,19 +89,16 @@ namespace YuGiTournament.Api.Services
                             {
                                 // كانت تعادل
                                 opponent.Draws -= 1;
-                                opponent.Points -= 1;
                             }
                             else if (match.Score1 == 3 && match.Score2 == 0 && match.Player1Id != playerId)
                             {
                                 // الخصم كان هو الفائز
                                 opponent.Wins -= 1;
-                                opponent.Points -= 3;
                             }
                             else if (match.Score2 == 3 && match.Score1 == 0 && match.Player2Id != playerId)
                             {
                                 // الخصم كان هو الفائز
                                 opponent.Wins -= 1;
-                                opponent.Points -= 3;
                             }
                             else if ((match.Score1 == 3 && match.Score2 == 0 && match.Player1Id == playerId) || (match.Score2 == 3 && match.Score1 == 0 && match.Player2Id == playerId))
                             {
@@ -110,6 +107,7 @@ namespace YuGiTournament.Api.Services
                             }
                             opponent.MatchesPlayed -= 1;
                             opponent.WinRate = opponent.MatchesPlayed > 0 ? (double)opponent.Wins / opponent.MatchesPlayed * 100 : 0;
+                            opponent.UpdateStats(SystemOfLeague.Classic); // ✅ أضف UpdateStats مع Classic
                         }
                     }
                     else
@@ -124,16 +122,14 @@ namespace YuGiTournament.Api.Services
                                     break;
                                 case var winnerId when winnerId == opponent.PlayerId:
                                     opponent.Wins--;
-                                    opponent.Points--;
                                     break;
                                 case null when round.IsDraw:
                                     opponent.Draws--;
-                                    opponent.Points -= 0.5;
                                     break;
                             }
                         }
+                        opponent.UpdateStats(SystemOfLeague.Points); // ✅ أضف UpdateStats مع Points
                     }
-                    opponent.UpdateStats();
                 }
 
                 var matchRounds = playerMatches.SelectMany(m => m.Rounds).ToList();
@@ -424,7 +420,7 @@ namespace YuGiTournament.Api.Services
                 .GetAll()
                 .Include(m => m.Player1)
                 .Include(m => m.Player2)
-                .Where(m => m.LeagueNumber == leagueId )
+                .Where(m => m.LeagueNumber == leagueId)
                 .OrderBy(m => m.Stage)
                 .ThenBy(m => m.MatchId)
                 .Select(m => new MatchDto
